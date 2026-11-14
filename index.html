@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Print Care</title>
+<meta name="description" content="Print Care — Job Register, Order Booking, प्रोडक्शन, Billing">
+<meta name="theme-color" content="#1e3a8a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Print Care">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+  html, body { margin: 0; height: 100%; background: #eef2f9; overflow: hidden; }
+  #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+  #ld { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+        font: 16px "Segoe UI", Roboto, "Noto Sans Devanagari", sans-serif; color: #1e3a8a; background: #eef2f9; z-index: 2; transition: opacity .3s; }
+  #ld img { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 6px 20px rgba(30, 58, 138, .25); }
+  #ld.hide { opacity: 0; pointer-events: none; }
+  #inst { position: fixed; right: 12px; bottom: 76px; z-index: 3; display: none; border: 0; border-radius: 22px; padding: 10px 16px;
+          background: linear-gradient(135deg, #4f7bff, #1e3a8a); color: #fff; font: 600 14px "Segoe UI", Roboto, sans-serif;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, .25); cursor: pointer; }
+  #inst span { margin-left: 8px; opacity: .8; }
+</style>
+</head>
+<body>
+<div id="ld"><img src="icon-192.png" alt=""><div>Print Care खुल रहा है…</div></div>
+<iframe id="app" title="Print Care" allow="camera; microphone; clipboard-read; clipboard-write; fullscreen; geolocation"></iframe>
+<button id="inst" type="button">📲 Print Care इंस्टॉल करें <span id="instX">✕</span></button>
+<script>
+  /* Print Care ऐप-पेज: असली ऐप (Google Apps Script) इसी पेज के अंदर खुलता है — इससे Google वाली पट्टी नहीं आती,
+     और ये पेज फ़ोन / कंप्यूटर पर "Install" होकर अपना ऐप बन जाता है। पासवर्ड वाला लिंक (?i=कोड) अंदर तक जाता है। */
+  var EXEC = 'https://script.google.com/macros/s/AKfycbyapK5gRciZ_YeirqLfGo6qR9cRKwTNhxOu08vNgyQn1824TbsJtqxwSey_tkDBvn_66A/exec';
+  var p = new URLSearchParams(location.search), code = (p.get('i') || p.get('invite') || '').replace(/[^A-Za-z0-9]/g, '');
+  var src = EXEC + '?app=1' + (code ? '&i=' + encodeURIComponent(code) : '');
+  var f = document.getElementById('app'), ld = document.getElementById('ld');
+  f.addEventListener('load', function () { setTimeout(function () { ld.className = 'hide'; }, 600); });
+  setTimeout(function () { ld.className = 'hide'; }, 15000);
+  f.src = src;
+  if (code && history.replaceState) history.replaceState(null, '', location.pathname);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+  /* 📲 Install: Chrome / Edge का अपना "Install" — बटन दबाते ही */
+  var deferred = null, btn = document.getElementById('inst');
+  var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  var hidden = false; try { hidden = localStorage.getItem('pc_inst_hide') === '1'; } catch (e) {}
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault(); deferred = e;
+    if (!standalone && !hidden) btn.style.display = 'block';
+  });
+  btn.addEventListener('click', function (e) {
+    if (e.target.id === 'instX') { btn.style.display = 'none'; try { localStorage.setItem('pc_inst_hide', '1'); } catch (x) {} return; }
+    if (!deferred) return;
+    deferred.prompt();
+    deferred.userChoice.then(function () { deferred = null; btn.style.display = 'none'; });
+  });
+  window.addEventListener('appinstalled', function () { btn.style.display = 'none'; });
+</script>
+</body>
+</html>
