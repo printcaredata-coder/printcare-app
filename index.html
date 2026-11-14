@@ -24,11 +24,14 @@
           background: linear-gradient(135deg, #4f7bff, #1e3a8a); color: #fff; font: 600 14px "Segoe UI", Roboto, sans-serif;
           box-shadow: 0 4px 14px rgba(0, 0, 0, .25); cursor: pointer; }
   #inst span { margin-left: 8px; opacity: .8; }
+  #ntf { position: fixed; left: 12px; bottom: 76px; z-index: 3; display: none; border: 0; border-radius: 22px; padding: 10px 16px; background: #fff; color: #1e3a8a; font: 600 14px "Segoe UI", Roboto, sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); cursor: pointer; }
+  #ntf span { margin-left: 8px; color: #888; }
 </style>
 </head>
 <body>
 <div id="ld"><img src="icon-192.png" alt=""><div>Print Care खुल रहा है…</div></div>
 <iframe id="app" title="Print Care" allow="camera; microphone; clipboard-read; clipboard-write; fullscreen; geolocation"></iframe>
+<button id="ntf" type="button">🔔 सूचना चालू करें <span id="ntfX">✕</span></button>
 <button id="inst" type="button">📲 Print Care इंस्टॉल करें <span id="instX">✕</span></button>
 <script>
   /* Print Care ऐप-पेज: असली ऐप (Google Apps Script) इसी पेज के अंदर खुलता है — इससे Google वाली पट्टी नहीं आती,
@@ -57,6 +60,25 @@
     deferred.userChoice.then(function () { deferred = null; btn.style.display = 'none'; });
   });
   window.addEventListener('appinstalled', function () { btn.style.display = 'none'; });
+  /* 🔔 ऐप के अंदर से: आइकन पर गिनती (1 2 3) और फ़ोन की सूचना */
+  window.addEventListener('message', function (e) {
+    var o = String(e.origin || ''), m = e.data || {};
+    if (!/\.googleusercontent\.com$/.test(o) && o !== 'https://script.google.com') return;
+    if (m.pc === 'badge') {
+      var n = Math.max(0, parseInt(m.n, 10) || 0);
+      document.title = (n ? '(' + n + ') ' : '') + 'Print Care';
+      try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (x) {}
+    } else if (m.pc === 'notify' && window.Notification && Notification.permission === 'granted') {
+      navigator.serviceWorker.ready.then(function (r) { r.showNotification(String(m.title || 'Print Care'), { body: String(m.body || ''), tag: String(m.tag || ''), icon: 'icon-192.png', badge: 'icon-192.png', renotify: false }); }).catch(function () {});
+    }
+  });
+  var nb = document.getElementById('ntf'), nHide = false; try { nHide = localStorage.getItem('pc_ntf_hide') === '1'; } catch (e) {}
+  if (window.Notification && Notification.permission === 'default' && !nHide) setTimeout(function () { nb.style.display = 'block'; }, 8000);
+  nb.addEventListener('click', function (e) {
+    nb.style.display = 'none';
+    if (e.target.id === 'ntfX') { try { localStorage.setItem('pc_ntf_hide', '1'); } catch (x) {} return; }
+    Notification.requestPermission().then(function (p) { if (p === 'granted') navigator.serviceWorker.ready.then(function (r) { r.showNotification('Print Care', { body: '🔔 सूचनाएँ चालू हो गईं', icon: 'icon-192.png' }); }); });
+  });
 </script>
 </body>
 </html>
