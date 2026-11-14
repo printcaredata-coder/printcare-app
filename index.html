@@ -72,12 +72,29 @@
       navigator.serviceWorker.ready.then(function (r) { r.showNotification(String(m.title || 'Print Care'), { body: String(m.body || ''), tag: String(m.tag || ''), icon: 'icon-192.png', badge: 'icon-192.png', renotify: false }); }).catch(function () {});
     }
   });
+  /* 🔔 Push (Firebase): ऐप बंद हो तब भी सूचना — टोकन अंदर वाले ऐप को देते हैं, वो सर्वर पर सेव करता है */
+  var FB = { apiKey: 'AIzaSyCOhCpg4FQIW3ErQ8Puw5v7SCaP8Ni-MWM', authDomain: 'print-care.firebaseapp.com', projectId: 'print-care', storageBucket: 'print-care.firebasestorage.app', messagingSenderId: '590771225829', appId: '1:590771225829:web:c384eaa557db8c3a45c00c' };
+  var VAPID = 'BK3uWjt9b_g2UWm7WmgAgAzMnvsGx-EQ0dDvk_PPPdF_tlg2R7vnlYBRBXj1siAy2oilbKyqAoRcYyBqvtRxORs';
+  var fbP = null, askSrc = null, askOrg = '';
+  function loadJs(u) { return new Promise(function (ok, no) { var x = document.createElement('script'); x.src = u; x.onload = ok; x.onerror = no; document.head.appendChild(x); }); }
+  function fbLoad() { if (!fbP) fbP = loadJs('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js').then(function () { return loadJs('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js'); }).then(function () { if (!firebase.apps.length) firebase.initializeApp(FB); }); return fbP; }
+  function sendTok() {
+    if (!askSrc || !window.Notification || Notification.permission !== 'granted' || !('serviceWorker' in navigator)) return;
+    fbLoad().then(function () { return navigator.serviceWorker.ready; })
+      .then(function (reg) { return firebase.messaging().getToken({ vapidKey: VAPID, serviceWorkerRegistration: reg }); })
+      .then(function (t) { if (t && askSrc) askSrc.postMessage({ pc: 'fcm', token: t }, askOrg); })
+      .catch(function (x) { console.log('fcm', x); });
+  }
+  window.addEventListener('message', function (e) {
+    var o = String(e.origin || ''), m = e.data || {};
+    if (m.pc === 'getFcm' && /\.googleusercontent\.com$/.test(o)) { askSrc = e.source; askOrg = o; sendTok(); }
+  });
   var nb = document.getElementById('ntf'), nHide = false; try { nHide = localStorage.getItem('pc_ntf_hide') === '1'; } catch (e) {}
   if (window.Notification && Notification.permission === 'default' && !nHide) setTimeout(function () { nb.style.display = 'block'; }, 8000);
   nb.addEventListener('click', function (e) {
     nb.style.display = 'none';
     if (e.target.id === 'ntfX') { try { localStorage.setItem('pc_ntf_hide', '1'); } catch (x) {} return; }
-    Notification.requestPermission().then(function (p) { if (p === 'granted') navigator.serviceWorker.ready.then(function (r) { r.showNotification('Print Care', { body: '🔔 सूचनाएँ चालू हो गईं', icon: 'icon-192.png' }); }); });
+    Notification.requestPermission().then(function (p) { if (p === 'granted') { sendTok(); navigator.serviceWorker.ready.then(function (r) { r.showNotification('Print Care', { body: '🔔 सूचनाएँ चालू हो गईं — ऐप बंद हो तब भी आएँगी', icon: 'icon-192.png' }); }); } });
   });
 </script>
 </body>
