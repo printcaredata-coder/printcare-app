@@ -89,6 +89,59 @@
     var o = String(e.origin || ''), m = e.data || {};
     if (m.pc === 'getFcm' && /\.googleusercontent\.com$/.test(o)) { askSrc = e.source; askOrg = o; sendTok(); }
   });
+  /* 💾 डिज़ाइनर का कंप्यूटर (मालिक 15-Nov): बुक हुए आइटम की फाइलें Drive से इस कंप्यूटर के चुने फ़ोल्डर में — पार्टी / ITAM CODE
+     (Chrome / Edge का File System Access; एक बार फ़ोल्डर चुनना, ब्राउज़र दोबारा खुलने पर शायद एक क्लिक "अनुमति") */
+  var FS = { root: null, ok: false, q: [], list: null, src: null, org: '', n: 0, dirs: 0, t: 0 };
+  function idb() { return new Promise(function (ok, no) { var r = indexedDB.open('pcfs', 1); r.onupgradeneeded = function () { r.result.createObjectStore('kv'); }; r.onsuccess = function () { ok(r.result); }; r.onerror = no; }); }
+  function kvGet(k) { return idb().then(function (db) { return new Promise(function (ok) { var t = db.transaction('kv').objectStore('kv').get(k); t.onsuccess = function () { ok(t.result); }; t.onerror = function () { ok(null); }; }); }); }
+  function kvSet(k, v) { return idb().then(function (db) { return new Promise(function (ok) { var t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = function () { ok(); }; t.onerror = function () { ok(); }; }); }); }
+  var fsb = document.createElement('button'); fsb.type = 'button'; fsb.id = 'fsb'; fsb.style.cssText = 'position:fixed;left:12px;bottom:126px;z-index:3;display:none;border:0;border-radius:22px;padding:10px 16px;background:#047857;color:#fff;font:600 14px Segoe UI,Roboto,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer';
+  document.body.appendChild(fsb);
+  function fsCheck() {
+    if (!window.showDirectoryPicker) return Promise.resolve(false);
+    return (FS.root ? Promise.resolve(FS.root) : kvGet('root')).then(function (h) {
+      FS.root = h || null;
+      if (!h) { fsb.textContent = '📁 फाइलों का फ़ोल्डर चुनें (जैसे O ड्राइव)'; fsb.style.display = 'block'; return false; }
+      return h.queryPermission({ mode: 'readwrite' }).then(function (p) { FS.ok = p === 'granted'; if (!FS.ok) { fsb.textContent = '📁 फ़ोल्डर में सेव की अनुमति दें — ' + h.name; fsb.style.display = 'block'; } else fsb.style.display = 'none'; return FS.ok; });
+    }).catch(function () { return false; });
+  }
+  fsb.addEventListener('click', function () {
+    var p = FS.root ? FS.root.requestPermission({ mode: 'readwrite' }) : window.showDirectoryPicker({ id: 'printcare', mode: 'readwrite' }).then(function (h) { FS.root = h; return kvSet('root', h).then(function () { return 'granted'; }); });
+    p.then(function (r) { FS.ok = r === 'granted'; if (FS.ok) { fsb.style.display = 'none'; fsFlush(); } }).catch(function () {});
+  });
+  function fsDir(path) { var d = FS.root, parts = (path || []).map(function (x) { return String(x || '').replace(/[\\/:*?"<>|]/g, ' ').trim() || 'बिना नाम'; }); var p = Promise.resolve(d); parts.forEach(function (x) { p = p.then(function (h) { return h.getDirectoryHandle(x, { create: true }); }); }); return p; }
+  function fsWrite(op) {
+    return fsDir(op.path).then(function (dir) {
+      if (!op.data) { FS.dirs++; return; }
+      var nm = String(op.name || 'फाइल').replace(/[\\/:*?"<>|]/g, ' ');
+      return dir.getFileHandle(nm, { create: true }).then(function (fh) { return fh.createWritable(); }).then(function (w) { return w.write(op.data).then(function () { return w.close(); }); })
+        .then(function () { FS.n++; if (op.id) return kvGet('saved').then(function (m) { m = m || {}; m[op.id] = op.at || '1'; return kvSet('saved', m); }); });
+    });
+  }
+  function fsDone() { clearTimeout(FS.t); FS.t = setTimeout(function () { if ((FS.n || FS.dirs) && FS.src) FS.src.postMessage({ pc: 'fsDone', n: FS.n, dirs: FS.dirs }, FS.org); FS.n = 0; FS.dirs = 0; }, 1500); }
+  function fsFlush() {
+    if (!FS.ok) return;
+    if (FS.list) fsListGo();
+    var q = FS.q; FS.q = []; var p = Promise.resolve();
+    q.forEach(function (op) { p = p.then(function () { return fsWrite(op); }).catch(function (x) { console.log('fs', x); }); });
+    p.then(fsDone);
+  }
+  function fsListGo() {
+    var L = FS.list; FS.list = null;
+    kvGet('saved').then(function (m) {
+      m = m || {}; var want = [], p = Promise.resolve();
+      L.forEach(function (it) { p = p.then(function () { return fsWrite({ path: it.path }); }).catch(function () {}); (it.files || []).forEach(function (f) { if (f.id && m[f.id] !== (f.at || '1')) want.push(f.id); }); });
+      p.then(function () { fsDone(); if (want.length && FS.src) FS.src.postMessage({ pc: 'fsWant', ids: want }, FS.org); });
+    });
+  }
+  window.addEventListener('message', function (e) {
+    var o = String(e.origin || ''), m = e.data || {};
+    if (!/\.googleusercontent\.com$/.test(o) || (m.pc !== 'fsList' && m.pc !== 'fsSave')) return;
+    FS.src = e.source; FS.org = o;
+    if (m.pc === 'fsList') FS.list = m.items || [];
+    else FS.q.push({ path: m.path, name: m.name, data: m.data, id: m.id, at: m.at });
+    fsCheck().then(function (ok) { if (ok) fsFlush(); });
+  });
   var nb = document.getElementById('ntf'), nHide = false; try { nHide = localStorage.getItem('pc_ntf_hide') === '1'; } catch (e) {}
   if (window.Notification && Notification.permission === 'default' && !nHide) setTimeout(function () { nb.style.display = 'block'; }, 8000);
   nb.addEventListener('click', function (e) {
