@@ -68,6 +68,14 @@
       var n = Math.max(0, parseInt(m.n, 10) || 0);
       document.title = (n ? '(' + n + ') ' : '') + 'Print Care';
       try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (x) {}
+    } else if (m.pc === 'install') {
+      var src2 = e.source;
+      if (standalone) { try { src2.postMessage({ pc: 'instRes', ok: false, why: 'standalone' }, o); } catch (x) {} return; }
+      if (!deferred) { try { src2.postMessage({ pc: 'instRes', ok: false, why: 'none' }, o); } catch (x) {} return; }
+      try {
+        deferred.prompt();
+        deferred.userChoice.then(function (c) { try { src2.postMessage({ pc: 'instRes', ok: !!(c && c.outcome === 'accepted'), why: c && c.outcome === 'accepted' ? '' : 'cancel' }, o); } catch (x) {} deferred = null; btn.style.display = 'none'; });
+      } catch (x) { try { src2.postMessage({ pc: 'instRes', ok: false, why: 'none' }, o); } catch (y) {} }
     } else if (m.pc === 'notify' && window.Notification && Notification.permission === 'granted') {
       navigator.serviceWorker.ready.then(function (r) { r.showNotification(String(m.title || 'Print Care'), { body: String(m.body || ''), tag: String(m.tag || ''), icon: 'icon-192.png', badge: 'icon-192.png', renotify: false }); }).catch(function () {});
     }
