@@ -60,7 +60,7 @@
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
   /* 📲 Install: Chrome / Edge का अपना "Install" — बटन दबाते ही */
   var deferred = null, btn = document.getElementById('inst');
-  var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone), (display-mode: window-controls-overlay)').matches;
   var hidden = false; try { hidden = localStorage.getItem('pc_inst_hide') === '1'; } catch (e) {}
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault(); deferred = e;
@@ -81,6 +81,8 @@
       var n = Math.max(0, parseInt(m.n, 10) || 0);
       document.title = (n ? '(' + n + ') ' : '') + 'Print Care';
       try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (x) {}
+    } else if (m.pc === 'instQ') {   /* 📲 लॉगिन पेज: ऐप पहले से इंस्टॉल है? */
+      try { e.source.postMessage({ pc: 'instState', on: standalone || (navigator.windowControlsOverlay && navigator.windowControlsOverlay.visible) || false }, o); } catch (x) {}
     } else if (m.pc === 'install') {
       var src2 = e.source;
       if (standalone) { try { src2.postMessage({ pc: 'instRes', ok: false, why: 'standalone' }, o); } catch (x) {} return; }
