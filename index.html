@@ -26,10 +26,23 @@
   #inst span { margin-left: 8px; opacity: .8; }
   #ntf { position: fixed; left: 12px; bottom: 76px; z-index: 3; display: none; border: 0; border-radius: 22px; padding: 10px 16px; background: #fff; color: #1e3a8a; font: 600 14px "Segoe UI", Roboto, sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); cursor: pointer; }
   #ntf span { margin-left: 8px; color: #888; }
+  /* 🟦 इंस्टॉल ऐप की ऊपर वाली नीली पट्टी (window-controls-overlay): नाम · 🔔 · हिंदी/English · लॉगआउट (मालिक 19-Nov) */
+  #tbar { display: none; position: fixed; left: env(titlebar-area-x, 0); top: env(titlebar-area-y, 0); width: env(titlebar-area-width, 100%); height: env(titlebar-area-height, 32px); background: #13265a; color: #fff; -webkit-app-region: drag; app-region: drag; align-items: center; justify-content: space-between; padding: 0 8px; box-sizing: border-box; z-index: 5; font: 600 13px "Segoe UI", Roboto, sans-serif; }
+  #tbar .tb-l { display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+  #tbar .tb-l img { width: 18px; height: 18px; }
+  #tbar .tb-r { display: flex; align-items: center; gap: 6px; }
+  #tbar .tb-r > * { -webkit-app-region: no-drag; app-region: no-drag; }
+  #tbar button, #tbar select { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.28); border-radius: 6px; padding: 2px 8px; font: inherit; cursor: pointer; height: 24px; }
+  #tbar select option { color: #000; }
+  #tbN { font-style: normal; background: #e53935; border-radius: 8px; padding: 0 5px; margin-left: 3px; font-size: 11px; }
+  #tbN:empty { display: none; }
+  body.wco #tbar { display: flex; }
+  body.wco #app { top: env(titlebar-area-height, 32px); height: calc(100% - env(titlebar-area-height, 32px)); }
 </style>
 </head>
 <body>
 <div id="ld"><img src="logo.webp" alt="Print Care" style="width:260px;height:auto;box-shadow:none;border-radius:0"><div>ऑर्डर से डिलीवरी तक, हर काम का हिसाब</div></div>
+<div id="tbar"><span class="tb-l"><img src="favicon-32.png" alt="">Print Care <b id="tbU"></b></span><span class="tb-r"><button type="button" id="tbBell" title="सूचनाएँ">🔔<i id="tbN"></i></button><select id="tbLang" title="भाषा"><option value="hi">हिंदी</option><option value="en">English</option></select><button type="button" id="tbOut">लॉगआउट</button></span></div>
 <iframe id="app" title="Print Care" allow="camera; microphone; clipboard-read; clipboard-write; fullscreen; geolocation"></iframe>
 <button id="ntf" type="button">🔔 सूचना चालू करें <span id="ntfX">✕</span></button>
 <button id="inst" type="button">📲 Print Care इंस्टॉल करें <span id="instX">✕</span></button>
@@ -157,6 +170,29 @@
     if (e.target.id === 'ntfX') { try { localStorage.setItem('pc_ntf_hide', '1'); } catch (x) {} return; }
     Notification.requestPermission().then(function (p) { if (p === 'granted') { sendTok(); navigator.serviceWorker.ready.then(function (r) { r.showNotification('Print Care', { body: '🔔 सूचनाएँ चालू हो गईं — ऐप बंद हो तब भी आएँगी', icon: 'icon-192.png' }); }); } });
   });
+  /* 🟦 ऊपर की पट्टी: अंदर वाला ऐप नाम / गिनती भेजता है, बटन दबाने पर उसे बताते हैं */
+  (function () {
+    var BAR = { src: null, org: '' }, $ = function (id) { return document.getElementById(id); };
+    function on() { var w = navigator.windowControlsOverlay; return !!(w && w.visible); }
+    function tell(m) { if (BAR.src) { try { BAR.src.postMessage(m, BAR.org); } catch (x) {} } }
+    function sync() { document.body.classList.toggle('wco', on()); tell({ pc: 'barOn', on: on() }); }
+    if (navigator.windowControlsOverlay) navigator.windowControlsOverlay.addEventListener('geometrychange', sync);
+    sync();
+    window.addEventListener('message', function (e) {
+      var o = String(e.origin || ''), m = e.data || {};
+      if (!/\.googleusercontent\.com$/.test(o) || m.pc !== 'bar') return;
+      BAR.src = e.source; BAR.org = o;
+      $('tbU').textContent = m.user ? '· ' + m.user : '';
+      $('tbN').textContent = m.bell ? String(m.bell > 99 ? '99+' : m.bell) : '';
+      $('tbBell').style.display = m.bellOn ? '' : 'none';
+      $('tbOut').style.display = m.user ? '' : 'none';
+      $('tbLang').value = m.lang === 'en' ? 'en' : 'hi';
+      tell({ pc: 'barOn', on: on() });
+    });
+    $('tbBell').onclick = function () { tell({ pc: 'barCmd', cmd: 'bell' }); };
+    $('tbLang').onchange = function () { tell({ pc: 'barCmd', cmd: 'lang', v: $('tbLang').value }); };
+    $('tbOut').onclick = function () { tell({ pc: 'barCmd', cmd: 'logout' }); };
+  })();
 </script>
 </body>
 </html>
