@@ -62,15 +62,15 @@
   var deferred = null, btn = document.getElementById('inst');
   var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone), (display-mode: window-controls-overlay)').matches;
   var hidden = false; try { hidden = localStorage.getItem('pc_inst_hide') === '1'; } catch (e) {}
+  /* मालिक 19-Nov: पहले लॉगिन, फिर इंस्टॉल — चिप तभी दिखे जब ऐप ने लॉगिन बताया (pc:loggedIn); दबाने पर पहले डाटा उतरे (ऐप का appInstall), फिर Install */
+  var loginOk = false;
+  function showChip() { if (loginOk && deferred && !standalone && !hidden) btn.style.display = 'block'; }
   window.addEventListener('beforeinstallprompt', function (e) {
-    e.preventDefault(); deferred = e;
-    if (!standalone && !hidden) btn.style.display = 'block';
+    e.preventDefault(); deferred = e; showChip();
   });
   btn.addEventListener('click', function (e) {
     if (e.target.id === 'instX') { btn.style.display = 'none'; try { localStorage.setItem('pc_inst_hide', '1'); } catch (x) {} return; }
-    if (!deferred) return;
-    deferred.prompt();
-    deferred.userChoice.then(function () { deferred = null; btn.style.display = 'none'; });
+    try { f.contentWindow.postMessage({ pc: 'instGo' }, '*'); } catch (x) {}
   });
   window.addEventListener('appinstalled', function () { btn.style.display = 'none'; });
   /* 🔔 ऐप के अंदर से: आइकन पर गिनती (1 2 3) और फ़ोन की सूचना */
@@ -81,6 +81,10 @@
       var n = Math.max(0, parseInt(m.n, 10) || 0);
       document.title = (n ? '(' + n + ') ' : '') + 'Print Care';
       try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (x) {}
+    } else if (m.pc === 'loggedIn') {
+      loginOk = true; showChip();
+    } else if (m.pc === 'loggedOut') {
+      loginOk = false; btn.style.display = 'none';
     } else if (m.pc === 'instQ') {   /* 📲 लॉगिन पेज: ऐप पहले से इंस्टॉल है? */
       try { e.source.postMessage({ pc: 'instState', on: standalone || (navigator.windowControlsOverlay && navigator.windowControlsOverlay.visible) || false }, o); } catch (x) {}
     } else if (m.pc === 'install') {
