@@ -2215,7 +2215,7 @@ function logout() {
   /* (मालिक 20-Nov: लॉगआउट पर कहीं भी डेटा नहीं मिटता — फ़ोन / Chrome / डेस्कटॉप; सिर्फ 💻 → हटाओ से) */
   /* याद वाला सत्र / लिस्टें / पेज — सब मिटाओ (अगला व्यक्ति पिछले का न देखे) */
   if (false) try { Object.keys(localStorage).filter(k => k === 'pc_sess' || k.indexOf('pc_bk_') === 0 || k.indexOf('pc_buy_') === 0 || k.indexOf('pc_prod_') === 0).forEach(k => localStorage.removeItem(k)); } catch (e) {}
-  S.buy = null; S.prod = null; S.bkCache = {}; S.spParties = null;
+  S.buy = null; S.prod = null; S.bkCache = {}; S.spParties = null; S.memTab = {};
   showLogin();
 }
 
@@ -2350,7 +2350,7 @@ async function panelAs(u) {
     if (u) { const r = await apiRaw('apiMyTabs', [S.token]); S.user = r.user; S.tabs = r.tabs; S.procMeta = r.procs || null; S.asPerm = r.perms || null; }
     else { S.user = S.realUser; S.tabs = S.realTabs; S.procMeta = S.realPm || null; S.realUser = null; S.realTabs = null; S.realPm = null; S.asPerm = null; }
   } catch (e) { S.asUser = prev; fail(e); return; }
-  S.bkCache = {}; S.prod = null; S.prodUi = null; S.data = null; S.full = null; S.bk = null; S.spParties = null; S.spList = null; S.tab = (S.tabs || [])[0] || null;
+  S.bkCache = {}; S.prod = null; S.prodUi = null; S.data = null; S.full = null; S.bk = null; S.spParties = null; S.spList = null; S.memTab = {}; S.tab = (S.tabs || [])[0] || null;
   closeModal && closeModal(); showMain();
   if (!S.procMeta) { try { await loadProcs(); } catch (e) {} }
   toast(u ? '👁 अब आप ' + S.user.name + ' का पैनल देख रहे हैं — जो भी बदलेंगे, रिकॉर्ड में "(Admin)" के साथ' : '↩ आपका Admin पैनल');
@@ -2380,6 +2380,7 @@ function showMain() {
   setTimeout(wsInit, 1200);
   setTimeout(() => { offCusLoad(); }, 2500);
   setTimeout(barSend, 600);
+  setTimeout(memWarm, 900);
   setTimeout(a2hsAuto, 2500);
 }
 
@@ -2461,8 +2462,10 @@ async function setView(v) {
   if (v === 'rates') return renderRates();
   if (v === 'stock') { S.view = 'stock'; drawNav(); openWa(); return; }
   if (v === 'home' && waOnly()) { S.view = 'stock'; openWa(); return; }
-  if (S.user.role === 'Admin') {
-    try { const mt = await api('apiMyTabs', S.token); S.tabs = mt.tabs; S.defaults = mt.defaults || S.defaults; } catch (e) { return fail(e); }
+  /* ⚡ (मालिक 20-Nov: लोकल होकर भी टैब देर से खुलता था) — पहले यहीं सर्वर से टैब-लिस्ट का इंतज़ार होता था (2–7 से.; बिना नेट टैब खुलता ही नहीं)। अब तुरंत खोलो, लिस्ट पीछे से (5 मिनट में एक बार) */
+  if (S.user.role === 'Admin' && !S.asUser && (!S.tabsAt || Date.now() - S.tabsAt > 300000)) {
+    S.tabsAt = Date.now();
+    api('apiMyTabs', S.token).then(mt => { const ch = JSON.stringify(mt.tabs) !== JSON.stringify(S.tabs); S.tabs = mt.tabs; S.defaults = mt.defaults || S.defaults; if (ch) drawNav(); }).catch(() => { S.tabsAt = 0; });
   }
   if (S.tabs.indexOf(S.tab) < 0) S.tab = S.tabs[0] || null;
   drawNav();
@@ -6267,7 +6270,7 @@ async function wsInit() {
 }
 function wsReset() {
   try { sessionStorage.removeItem('pc_nav'); } catch (e) {}
-  S.bkCache = {}; S.prod = null; S.prodUi = null; S.data = null; S.full = null; S.bk = null; S.spParties = null; S.spList = null; S.buy = null;
+  S.bkCache = {}; S.prod = null; S.prodUi = null; S.data = null; S.full = null; S.bk = null; S.spParties = null; S.spList = null; S.buy = null; S.memTab = {};
   clearInterval(S.locT); S.loc = null; S.view = 'home';
   try { closeModal(); } catch (e) {}
   showMain();
@@ -9754,7 +9757,8 @@ async function loadTab(opts) {
   const key = fullKey();
   if (S.full && S.full.key === key && !opts.refresh) { compute(); return; }
   if (!S.full || S.full.key !== key) {
-    let cached = await IDB.get(key);
+    let cached = (S.memTab && S.memTab[key]) || await IDB.get(key);
+    if (cached && !S.asUser) (S.memTab = S.memTab || {})[key] = cached;
     if (!cached && S.asUser && S.realUser) { const A = await IDB.get(S.realUser.username + '|' + S.tab + '|' + (S.q.from || 'all')); if (A) { cached = asProject(A, S.tab); cached.key = key; cached.savedAt = 0; cached.ver = null; } }
     if (key !== fullKey()) return;
     if (cached) { S.full = cached; compute(); setSync('⟳ जाँच रहा है…'); }
@@ -9777,7 +9781,7 @@ async function fetchFull(key, fresh) {
     const d = await tabGet(S.tab, S.q.from, fresh);
     if (seq !== loadSeq || key !== fullKey()) return;
     d.key = key; d.savedAt = Date.now();
-    IDB.put(key, d);
+    IDB.put(key, d); if (!S.asUser) (S.memTab = S.memTab || {})[key] = d;
     if (modalOpen()) { S.pendingFull = d; }    // एडिट/फिल्टर खुला है — बंद होते ही लगाएँगे
     else { S.full = d; compute(); }
     setSync('✓ ' + d.loadedAt.slice(11));
@@ -10559,6 +10563,13 @@ const PREFETCH = [[0, 'बंद'], [7, 'पिछला 1 हफ्ता'], [3
 function setPrefetch(v) { prefs.set('prefetch', +v); toast('पहले से याद: ' + PREFETCH.find(o => o[0] === +v)[1] + ' ✓'); startPrefetch(); }
 
 /** बाकी टैब का डेटा भी पीछे से याद में (ताकि कोई भी टैब पहली बार में भी तुरंत खुले)। */
+/* ⚡ सुपर-फ़ास्ट (मालिक 20-Nov): ऐप खुलते ही हर टैब का रखा डेटा RAM में — टैब दबाते ही दिखे (कंप्यूटर पर; फ़ोन पर नहीं) */
+async function memWarm() {
+  if (S.asUser || !S.user || (isMob() && !window.PC_DESK)) return;
+  S.memTab = S.memTab || {};
+  for (const t of S.tabs || []) { const key = S.user.username + '|' + t + '|' + (S.q.from || 'all'); if (S.memTab[key]) continue; try { const d = await IDB.get(key); if (d) S.memTab[key] = d; } catch (e) {} await new Promise(z => setTimeout(z, 30)); }
+  setTimeout(warmTabs, 1500);
+}
 async function warmTabs() {
   if (S.asUser) return;
   if (S.warming || !S.token || (S.defaults && S.defaults.warmAll === false)) { startPrefetch(); return; }
@@ -10568,9 +10579,9 @@ async function warmTabs() {
   for (const t of S.tabs) {
     const key = (S.user ? S.user.username : '') + '|' + t + '|' + (S.q.from || 'all');
     if (t === S.tab) continue;
-    const old = await IDB.get(key);
+    const old = (S.memTab && S.memTab[key]) || await IDB.get(key); if (old) (S.memTab = S.memTab || {})[key] = old;
     if (old && (st ? !tabChanged(old, { ver: st.vers[t], mod: st.mod }) : old.savedAt && Date.now() - old.savedAt < DIRECT_MS)) continue;
-    try { const d = await tabGet(t, S.q.from, false); d.key = key; d.savedAt = Date.now(); await IDB.put(key, d); } catch (e) { /* अगली बार */ }
+    try { const d = await tabGet(t, S.q.from, false); d.key = key; d.savedAt = Date.now(); await IDB.put(key, d); (S.memTab = S.memTab || {})[key] = d; } catch (e) { /* अगली बार */ }
   }
   S.warming = false; S.warmedAt = Date.now();
   startPrefetch();
