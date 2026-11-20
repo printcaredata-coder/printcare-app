@@ -2442,8 +2442,8 @@ function drawNav() {
   n.innerHTML = `<div class="side-logo">${logo(36)}<span class="si-tx">${WS === 'cj' ? '🧸 <b>ClapJoy</b>' : 'Print <b>Care</b>'}</span></div>` +
     mobItems().filter(x => x.k !== 'settings').map(x => item(x.k.indexOf('tab:') === 0 ? S.view === 'data' && S.tab === x.k.slice(4) : S.view === x.k, String(x.ic).indexOf('<') === 0 || String(x.ic).length > 4 ? x.ic : '<span class="nav-emo">' + x.ic + '</span>', x.k === 'stock' ? 'स्टॉक नोट' : x.t, x.go)).join('') +
     (S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna') ? item(false, '<span class="nav-emo">🕘</span>', 'हाज़िरी', 'attOpen()') : '') +
-    (fsCan() ? item(S.view === 'files', '<span class="nav-emo">📁</span>', 'सारे क्लाइंट', "setView('files')") : '') +
-    '<div class="side-gap"></div>' + (setTimeout(swNag, 3000), setTimeout(taraSyncStart, 3000), '') + (S.user && S.user.simple ? '' :
+    (fsCan() && !bkpOnly() ? item(S.view === 'files', '<span class="nav-emo">📁</span>', 'सारे क्लाइंट', "setView('files')") : '') +
+    '<div class="side-gap"></div>' + (setTimeout(swNag, 3000), setTimeout(taraSyncStart, 3000), '') + (S.user && (S.user.simple || bkpOnly()) ? '' :
     item(S.view === 'settings' || S.view === 'users', navIc('icon-settings', '⚙️'), 'ऐप सेटिंग', "setView('settings')"));
   const titles = { files: '📁 सारे क्लाइंट', home: '🏠 होम', settings: '⚙️ ऐप सेटिंग', users: '👥 यूज़र और परमिशन', prod: '🏭 प्रोडक्शन — आज क्या बाकी', buy: '🧾 Workflow — खरीद / बाहर / घर', rates: '📒 रेट मास्टर — हर काम का रेट एक जगह', stock: '📦 स्टॉक नोट — तारा फैक्ट्री' };
   if ($('pageTitle') && !(S.view === 'data' && $('pageTitle').querySelector('#tb2'))) $('pageTitle').innerHTML = S.view === 'data' ? tabIcon(S.tab) + ' ' + esc(S.tab) : (titles[S.view] || '');
@@ -2499,6 +2499,7 @@ function exitAsk() {
   });
 }
 async function setView(v) {
+  if (bkpOnly() && v !== 'bkp') v = 'bkp';
   if (v !== S.view) navRec();
   S.view = v; if (v !== 'data' && $('xlTabs')) $('xlTabs').remove();
   closePop();
@@ -3168,8 +3169,8 @@ function itemCodeOf(row) {
   return ci >= 0 ? String(row.v[ci] || '').trim() : '';
 }
 async function loadProcs() {
-  if (S.procPre) { S.procMeta = S.procPre; S.procPre = null; drawNav(); loadProcImgs(); vendLists(); return; }
-  try { S.procMeta = await api('apiProcesses', S.token); drawNav(); loadProcImgs(); vendLists(); } catch (e) { S.procMeta = null; }
+  if (S.procPre) { S.procMeta = S.procPre; S.procPre = null; drawNav(); loadProcImgs(); vendLists(); if (bkpOnly() && S.view !== 'bkp') setView('bkp'); return; }
+  try { S.procMeta = await api('apiProcesses', S.token); drawNav(); loadProcImgs(); vendLists(); if (bkpOnly() && S.view !== 'bkp') setView('bkp'); } catch (e) { S.procMeta = null; }
 }
 /* वेंडर की लिस्ट: हर काम की datalist (vl_CODE) — पहली बार लिखा नाम अपने आप जुड़ता है */
 function vl(code) { return `list="vl_${code}" onchange="learnVendor('${code}',this.value)"`; }
@@ -4726,6 +4727,7 @@ async function moveRedirect() {
    बाएँ / दाएँ स्वाइप = अगला / पिछला पेज, ऊपर से नीचे खींचो = ताज़ा, Excel लिस्ट = कार्ड (📊 टेबल भी)। डेस्कटॉप वैसा ही। */
 function isMob() { return !!(window.matchMedia && matchMedia('(max-width: 800px) and (pointer: coarse), (max-width: 520px)').matches); }   /* मालिक 16-Nov: मोबाइल वाला रूप सिर्फ फ़ोन पर, कंप्यूटर पर कभी नहीं */
 function mobItems() {
+  if (bkpOnly()) return [{ k: 'bkp', ic: '📖', t: 'बुक प्रिंटिंग', go: "setView('bkp')" }];
   if (S.user && S.user.simple) { const it0 = simpleItems(); it0.forEach(x => { x.fn = x.k === 'buy' ? () => buyOpen('') : x.k.indexOf('tab:') === 0 ? () => selectTab(S.tabs.indexOf(x.k.slice(4))) : () => setView(x.go.match(/'(\w+)'/)[1]); }); return it0; }
   const it = [{ k: 'home', ic: navIc('icon-home', '🏠'), t: 'होम', go: "setView('home')" }];
   /* मालिक 15-Nov: होम → Job Register → Order Booking → 🧾 Workflow → Billing → बाकी टैब → प्रोडक्शन… */
@@ -8643,6 +8645,8 @@ async function comboSave() {
   catch (e) { fail(e); busy('cbSave', false); }
 }
 /* ---------- 📖 बुक प्रिंटिंग — तारा का टेबल (मालिक 20-Nov): तारा / नितिन / भावना सबको एक ही स्क्रीन, एक ही डाटा ---------- */
+/* 📖 तारा जैसा यूज़र: सिर्फ बुक प्रिंटिंग टेबल — कोई होम / दूसरे पन्ने नहीं (मालिक 20-Nov) */
+function bkpOnly() { const u = S.user; return !!(u && !S.asUser && u.role !== 'Admin' && String(u.username || '').toLowerCase() !== 'bhavna' && bkpOk()); }
 function bkpOk() { const u = S.user; if (!u || S.asUser) return false; if (u.role === 'Admin' || String(u.username || '').toLowerCase() === 'bhavna') return true; return !!(S.procMeta && S.procMeta.see && !(S.tabs || []).length && !u.stock && !u.design); }
 async function renderBkp() {
   const m = $('main'); if ($('pageTitle')) $('pageTitle').innerHTML = '📖 बुक प्रिंटिंग';
