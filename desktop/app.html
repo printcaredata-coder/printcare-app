@@ -8699,7 +8699,8 @@ function bkpAttach(code, slot) {
         bkpUpSet(code, 5 + 90 * Math.min(file.size, s2 + CH) / file.size);
       }
       bkpUpSet(code, 97);
-      const sv = await api('apiWfFileSet', S.token, code, 'TARA', slot, { id, name: st.name || file.name, size: file.size, label }, 'keep');
+      const had = ((S.bkpD && S.bkpD.rows) || []).some(x => x.code === code && (slot === 'color' ? x.color : x.bw));
+      const sv = await api('apiWfFileSet', S.token, code, 'TARA', slot, { id, name: st.name || file.name, size: file.size, label }, had ? 'replace' : 'keep');   /* बदलना = इसी आइटम की फ़ाइल सुधार (पुरानी Old File में), पुराने ऑर्डर भी नई देखें */
       if (sv && sv.saved === false) throw new Error('इस आइटम में तारा का काम (TARA) नहीं जुड़ा — पहले आइटम में तारा चुनें।');
       bkpUpSet(code, 100);
       S.bkpD = await api('apiBkpData', S.token); bkpCacheSave();
