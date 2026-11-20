@@ -8663,12 +8663,13 @@ function bkpFileBtn(f, lbl, r, slot) {
   return v + (window.pcDesk && window.pcDesk.fileOpen ? '<button class="btn sm" onclick="taraOpen(\'' + esc(f.id) + '\',this)" title="कंप्यूटर के प्रोग्राम में खोलो">📂</button>' : '');
 }
 /* 📎 जो फ़ाइल नहीं लगी वहीं से लगाओ (Admin) — Drive पर जाती है, आइटम की TARA फ़ाइल बनती है, तारा को तुरंत दिखे (मालिक 20-Nov) */
-function bkpAttach(code, slot) {
+function bkpAttach(code, slot, btn) {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.pdf,application/pdf';
   inp.onchange = async () => {
     const file = inp.files && inp.files[0]; if (!file) return;
     const label = slot === 'color' ? 'कलर फ़ाइल' : 'B/W फ़ाइल', CH = 4 * 1048576;
-    toast('⏳ ' + file.name + ' जा रही है…');
+    const say = t => { if (btn && document.body.contains(btn)) { btn.disabled = true; btn.textContent = t; } };
+    say('⏳ शुरू…'); toast('⏳ ' + file.name + ' जा रही है…');
     try {
       const st = await api('apiWfFileStart', S.token, code, 'TARA', slot, label, file.name, file.type || 'application/pdf', file.size, '');
       let id = st.id;
@@ -8676,12 +8677,14 @@ function bkpAttach(code, slot) {
         const b64 = await blobB64(file.slice(s2, Math.min(file.size, s2 + CH)));
         let r, tries = 0; for (;;) { try { r = await api('apiFolderUploadChunk', S.token, st.uploadId, s2, b64); break; } catch (e) { if (++tries >= 3) throw e; await new Promise(z => setTimeout(z, 1500 * tries)); } }
         if (r && r.done) id = r.id;
+        say('⏳ ' + Math.round(100 * Math.min(file.size, s2 + CH) / file.size) + '%');
       }
+      say('⏳ सेव…');
       const sv = await api('apiWfFileSet', S.token, code, 'TARA', slot, { id, name: st.name || file.name, size: file.size, label }, 'keep');
       if (sv && sv.saved === false) throw new Error('इस आइटम में तारा का काम (TARA) नहीं जुड़ा — पहले आइटम में तारा चुनें।');
       toast('📎 ' + label + ' लग गई — तारा को दिखेगी ✓');
       S.bkpD = await api('apiBkpData', S.token); if (S.view === 'bkp') drawBkp();
-    } catch (e) { fail(e); }
+    } catch (e) { if (btn && document.body.contains(btn)) { btn.disabled = false; btn.textContent = '✗ फिर कोशिश'; } fail(e); }
   };
   inp.click();
 }
@@ -8714,7 +8717,7 @@ function drawBkp() {
       ? '<span class="pst done">✅ पूरा</span>'
       : act ? '<div class="bk-in"><input id="bo_' + r.row + '" inputmode="numeric" placeholder="आज निकालीं" onkeydown="if(event.key===\'Enter\')bkpDone(' + r.row + ')"><button class="btn primary sm" onclick="bkpDone(' + r.row + ')">✅ Done</button></div>' : '<span class="muted small">👁 सिर्फ देखें</span>';
     return '<tr class="' + (r.left <= 0 ? 'bk-done' : '') + '"><td>' + esc(showDate(r.date)) + '</td><td><b>#' + esc(r.job) + '</b></td><td>' + esc(r.party) + '</td><td>' + esc(r.code) + '</td><td>' + esc(r.name) + '</td><td class="bk-n">' + fmtNum(r.qty) + '</td><td class="bk-nt">' + note + '</td>'
-      + '<td class="bk-f">' + (r.bw ? bkpFileBtn(r.bw, '✅ B/W फ़ाइल लगी', r, 'inner') : '<span class="bk-nof">❌ B/W फ़ाइल नहीं लगी</span>' + (S.user && S.user.role === 'Admin' ? ' <button class="btn sm primary" onclick="bkpAttach(\'' + esc(r.code).replace(/'/g, '') + '\',\'inner\')">📎 फ़ाइल लगाओ</button>' : '')) + bkpFileBtn(r.color, '✅ कलर फ़ाइल लगी', r, 'color') + '</td><td>' + last + '</td>'
+      + '<td class="bk-f">' + (r.bw ? bkpFileBtn(r.bw, '✅ B/W फ़ाइल लगी', r, 'inner') : '<span class="bk-nof">❌ B/W फ़ाइल नहीं लगी</span>' + (S.user && S.user.role === 'Admin' ? ' <button class="btn sm primary" onclick="bkpAttach(\'' + esc(r.code).replace(/'/g, '') + '\',\'inner\',this)">📎 फ़ाइल लगाओ</button>' : '')) + bkpFileBtn(r.color, '✅ कलर फ़ाइल लगी', r, 'color') + '</td><td>' + last + '</td>'
       + '<td class="bk-n"><b class="' + (r.left > 0 ? 'bk-left' : 'bk-zero') + '">' + fmtNum(r.left) + '</b><div class="muted small">निकलीं ' + fmtNum(r.out) + '</div></td></tr>';
   };
   m.innerHTML = '<div class="bkp"><div class="bk-h"><div class="seg">' + seg('all', 'सब', D.rows.length) + seg('open', '⏳ बाकी', nOpen) + seg('done', '✅ पूरे', D.rows.length - nOpen) + '</div>'
