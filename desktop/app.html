@@ -8659,7 +8659,24 @@ function bkpFileBtn(f, lbl, r, slot) {
   if (!f) return '';
   return window.pcDesk && window.pcDesk.fileOpen
     ? '<button class="btn sm primary" onclick="taraOpen(\'' + esc(f.id) + '\',this)" title="' + esc(f.name) + '">📂 ' + lbl + '</button>'
-    : '<button class="btn sm primary" onclick="taraPdf(\'' + esc(r.code).replace(/'/g, '') + '\',this,\'' + esc(r.job) + '\',\'' + slot + '\')" title="' + esc(f.name) + '">👁 ' + lbl + '</button>';
+    : '<button class="btn sm primary" onclick="bkpView(\'' + esc(f.id) + '\',\'' + esc(lbl) + ' — #' + esc(r.job) + ' ' + esc(r.code).replace(/'/g, '') + '\')" title="' + esc(f.name) + '">👁 ' + lbl + '</button>';
+}
+/* 👁 फ़ाइल ऐप के अंदर पॉपअप में (PDF / फोटो) — ⬇ डाउनलोड और 🖨 प्रिंट के साथ (मालिक 20-Nov) */
+async function bkpView(id, title) {
+  openModal('📎 ' + title, '<div class="fv"><div class="fv-right" style="width:100%"><div class="fv-bar"><span id="fvName" class="fv-name">फाइल…</span><span><button class="btn sm" id="fvPrint" disabled onclick="printFile()">🖨 प्रिंट</button> <button class="btn sm primary" id="fvDl" disabled onclick="saveBlob(S.lastFile)">⬇ डाउनलोड</button></span></div><div class="progress"><div id="fvBar" class="progress-bar"></div><span id="fvPct">0%</span></div><div id="fvBody" class="fv-body pdfhost"></div></div></div>', 'full');
+  try {
+    const key = 'bkp_' + id;
+    const r = (await fileCacheGet(key)) || await downloadParts((st, len) => api('apiBkpPart', S.token, id, st, len), key, (g, t) => { if (t && $('fvBar')) { $('fvBar').style.width = Math.round(100 * g / t) + '%'; if ($('fvPct')) $('fvPct').textContent = Math.round(100 * g / t) + '%'; } });
+    const f = { name: r.name, mime: r.mime || 'application/octet-stream', bytes: new Uint8Array(r.bytes) };
+    f.blob = new Blob([r.bytes], { type: f.mime }); f.url = URL.createObjectURL(f.blob); S.lastFile = f;
+    if ($('fvName')) $('fvName').textContent = f.name + ' · ' + (f.bytes.length / 1048576).toFixed(1) + ' MB';
+    if ($('fvDl')) $('fvDl').disabled = false; if ($('fvPrint')) $('fvPrint').disabled = false;
+    const body = $('fvBody'); if (!body) return;
+    if (f.mime === 'application/pdf') { body.innerHTML = '<div id="pdfPages" class="pdfpages fit"></div>'; try { await showPdf(f.bytes); } catch (e) { body.innerHTML = '<div class="empty">' + esc(e.message || 'PDF नहीं खुल पाई') + ' — ⬇ डाउनलोड करके देखें।</div>'; } }
+    else if (f.mime.indexOf('image/') === 0) body.innerHTML = '<img src="' + f.url + '" alt="">';
+    else body.innerHTML = emptyArt('empty-files', 'इस फाइल का प्रीव्यू नहीं दिख सकता — ⬇ डाउनलोड करके खोलें।');
+    if ($('fvPct')) $('fvPct').textContent = 'तैयार';
+  } catch (e) { if ($('fvBody')) $('fvBody').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
 }
 function drawBkp() {
   const m = $('main'), D = S.bkpD; if (!m || !D) return;
