@@ -5769,7 +5769,7 @@ function iwFileHtml(slot) {
   let nm = '<span class="muted small">⬜ फाइल नहीं लगी</span>';
   if (f) nm = `<button type="button" class="iw-fn" onclick="iwShow('${slot}')">📄 ${esc(f.name)}</button>`;
   else if (slot === 'inner' && B.jrFile && B.jrFile.id) nm = `<button type="button" class="iw-fn" onclick="iwShow('jr')" title="Job Register में पहले से लगी">📄 ${esc(B.jrFile.name || 'पुरानी फाइल')}</button>`;
-  if (can) {
+  if (can && false) {   /* 📤 तारा / अंजलि को भेजो — बंद (मालिक 20-Nov) */
     const sent = w => (B.copies || []).find(c => c.who === w && c.slot === slot);
     const whoL = IW_TARA_SLOTS.indexOf(slot) >= 0 ? ['tara', 'anjali'] : ['anjali'], all = whoL.every(w => sent(w));
     const lbl = whoL.length > 1 ? 'तारा + अंजलि' : 'अंजलि';
@@ -6408,7 +6408,7 @@ function designPanel(codes) {
   const L = (S.procMeta && S.procMeta.list) || [];
   const box = codes.map(c => { const fb = fileBox(c); if (!fb) return ''; const p = L.find(x => x.code === c); return `<div class="dz-c"><div class="dz-h">${esc(p ? p.hi || p.name : c)}</div>${fb}</div>`; }).filter(Boolean).join('');
   const dzI = (S.dzItems || []).find(x => String(x.code).toLowerCase() === String(S.wfItem).toLowerCase()); S.dzDone = S.dzDone || {}; if (dzI && S.dzDone[S.wfItem] === undefined) S.dzDone[S.wfItem] = !!dzI.done;
-  return `<div class="dz"><div class="dz-done">${designDoneBtn(S.wfItem)}</div>${dzI && dzI.rej ? '<div class="tc-file">❌ तारा ने फाइल वापस की: <b>' + esc(dzI.rej) + '</b> — ठीक करके नई फाइल लगाएँ</div>' : ''}<div class="dz-top">🎨 फाइलें — ${esc(S.wfItem)} <button type="button" class="btn sm" id="azPull" onclick="anjaliPull()" title="इस आइटम की सारी फाइलें आपके कंप्यूटर के फ़ोल्डर में आ जाएँगी">⬇ ये आइटम मेरे कंप्यूटर में लो</button> <span class="muted small">CDR / Corel से बनी फाइल सही खाने में लगाएँ — Drive पर भी और आपके कंप्यूटर के फ़ोल्डर में भी</span></div>${box || '<div class="empty">इस आइटम का वर्कफ़्लो (काम) अभी तय नहीं — भावना / Admin से कहें</div>'}</div>`;
+  return `<div class="dz"><div class="dz-done">${designDoneBtn(S.wfItem)}</div>${dzI && dzI.rej ? '<div class="tc-file">❌ तारा ने फाइल वापस की: <b>' + esc(dzI.rej) + '</b> — ठीक करके नई फाइल लगाएँ</div>' : ''}<div class="dz-top">🎨 फाइलें — ${esc(S.wfItem)} <button type="button" class="btn sm" id="azPull" style="display:none" onclick="anjaliPull()" title="इस आइटम की सारी फाइलें आपके कंप्यूटर के फ़ोल्डर में आ जाएँगी">⬇ ये आइटम मेरे कंप्यूटर में लो</button> <span class="muted small">CDR / Corel से बनी फाइल सही खाने में लगाएँ — Drive पर भी और आपके कंप्यूटर के फ़ोल्डर में भी</span></div>${box || '<div class="empty">इस आइटम का वर्कफ़्लो (काम) अभी तय नहीं — भावना / Admin से कहें</div>'}</div>`;
 }
 /* 💾 कंप्यूटर में सेव (ऐप-पेज app.priniva.in के ज़रिये — Chrome / Edge, एक बार फ़ोल्डर चुनना) */
 function fsSaveLocal(path, name, data, id, at) { if (window.top === window) return; shellMsg({ pc: 'fsSave', path, name, data, id: id || '', at: at || '' }); }
