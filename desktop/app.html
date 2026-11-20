@@ -2983,7 +2983,7 @@ async function renderHome() {
     <div class="home3">${(S.user.design ? [] : BUY_PAGES).map(p => `<button class="h3c" onclick="buyOpen('${p[0]}')"><b>${p[1]}</b><small>${p[2]}</small></button>`).join('')}${S.user.stock ? '<button class="h3c" onclick="setView(\'stock\')"><b>📦 स्टॉक नोट</b><small>तारा फैक्ट्री से आए फोटो + नोट</small></button>' : ''}<button class="h3c later" onclick="openLater()"><b>⏳ रेट बाकी</b><small>जिन आइटम में काम टिक है पर रेट बाद में भरना है</small></button></div>
     <div class="kpis" id="kpis">${S.tabs.map(t => `<div class="kpi skel"><div class="k-ic">${tabIcon(t)}</div><div><div class="k-t">${esc(t)}</div><div class="k-n">…</div></div></div>`).join('')}</div>
     <div class="home-grid"><div class="card"><h3>🕘 हाल की एंट्री</h3><div id="recent" class="loading small">लोड हो रहा है…</div></div>
-      <div class="card"><h3>⚡ जल्दी जाएँ</h3><div class="quick">${S.tabs.map((t, i) => `<button class="btn" onclick="selectTab(${i})">${tabIcon(t)} ${esc(t)}</button>`).join('')}
+      <div class="card"><h3>⚡ जल्दी जाएँ</h3><div class="quick">${S.tabs.map((t, i) => `<button class="btn" onclick="selectTab(${i})">${tabIcon(t)} ${esc(t)}</button>`).join('')}${S.user && S.user.role === 'Admin' && !S.asUser && !WS ? '<button class="btn" onclick="cjFilesGo()" title="Drive (ALL CLIENT) के ClapJoy फ़ोल्डर की फ़ाइलें आइटम में">📎 ClapJoy फ़ाइलें लगाओ</button>' : ''}
         <button class="btn" onclick="setView('settings')">⚙️ ऐप सेटिंग</button></div></div></div></div>`;
   const day0 = new Date(); day0.setHours(0, 0, 0, 0);
   const today = day0.getTime(), week = today - 6 * 864e5, month = new Date(day0.getFullYear(), day0.getMonth(), 1).getTime();
@@ -5688,6 +5688,7 @@ const IW_TARA_SLOTS = ['inner', 'color'];
 const IW_SLOTL = { inner: '⚫ B/W पेज (तारा प्रिंट)', color: '🎨 कलर पेज', cover: '📕 कवर की प्रिंट फाइल', cdr: '🎨 ओरिजिनल CDR फाइल' };
 function iwDraw() {
   { const c0 = iwCat(); if (c0 === 'pick' || isOff(c0)) return iwDrawOff(); }
+  setTimeout(() => { if ($('offAll')) offAllLoad(); }, 60);   /* 📎 आइटम के Drive फ़ोल्डर की सारी फ़ाइलें — बुक / नोट्स वाली विंडो में भी (मालिक 20-Nov) */
   const B = S.bk, D = B.D, b = $('bkBody'), cat = iwCat(), jr = B.mode === 'jr', T = iwT(), can = D.access === 'Edit', dis = can ? '' : ' disabled', colOn = n0(bkVal(D, 'COLOR PAGES')) > 0 || !!(T.files || {}).color;
   const v = (nm, t) => esc(t ? bkVal(D, nm) : String(bkVal(D, nm)).replace(/[₹,]/g, ''));
   const inp = (nm, ph) => bkCol(D, nm) >= 0 ? `<input class="iw2-in" data-bk="${nm}" inputmode="decimal" value="${v(nm)}" placeholder="${ph || ''}" oninput="iwSum()"${dis}>` : '<span class="muted small" title="Admin → यूज़र → ✏️ परमिशन में यह कॉलम टिक करें">⚠ इस कॉलम का अधिकार नहीं</span>';
@@ -5726,6 +5727,7 @@ function iwDraw() {
         <div class="iw2-card pv"><div class="iw2-pvh"><h4>PDF प्रीव्यू</h4><span class="iw2-sp"></span><button class="btn sm" onclick="iwFull()" title="फाइल पूरी स्क्रीन पर — ज़ूम / स्क्रॉल">⛶ पूरी स्क्रीन</button><button class="btn sm" onclick="iwDl(0)">⬇ Download</button>${isMob() ? '' : '<button class="btn sm primary" onclick="iwDl(1)">🖥 Open on computer</button>'}</div>
           <div id="iwPrev" class="pdfhost iw-pv" onclick="if(event.target.tagName==='CANVAS'||event.target.classList.contains('pdfslot'))iwFull()" title="पेज पर क्लिक = पूरी स्क्रीन"></div><div class="iw2-pvf" id="iwRh">बाईं तरफ़ / नीचे किसी फाइल पर क्लिक करें</div></div>
         <div class="iw2-card fl2" id="iwFiles"></div>
+        <div class="iw2-card" id="offAllW"><div id="offAll"></div></div>
       </div>
     </div>
 
@@ -7089,8 +7091,8 @@ function iwDrawOff() {
       <button class="iw2-hb w" onclick="openChangeLog('${esc(B.code).replace(/'/g, '')}')">इतिहास देखें</button><button class="iw2-x" onclick="iwBack()" title="बंद करें">✕</button></div>
     <div class="iw">
       <div class="iw-left">
-        ${pick && (!B.offPick || WS === 'cj') ? `<div class="iw2-card"><b>📂 पहले कैटेगरी चुनें</b><div class="muted small">${WS === 'cj' ? 'यह प्रोडक्ट क्या है? नीचे से चुनें — उसके हिस्से (बोर्ड, ट्रे, बॉक्स…) अपने-आप आ जाएँगे।' : 'यह आइटम "Review Required" है — ऊपर कैटेगरी चुनें। ऑफसेट का काम हो तो "🖨 ऑफसेट…" चुनें, फिर ऑफसेट की कैटेगरी (जैसे शीट प्रिंटिंग)।'}</div>
-          <div class="off-quick">${pk.map(k => `<button type="button" class="btn sm" onclick="iwCatSet('${k}')"${dis}>${esc(catName(k))}</button>`).join('')}${adm ? '<button type="button" class="btn sm" onclick="offCatPick(\'__new\')">➕ नई कैटेगरी</button>' : ''}</div></div>` : `
+        ${pick ? `<div class="iw2-card rr-hint"><b>📂 कैटेगरी अभी नहीं चुनी (ज़रूरी नहीं — बाद में भी चुन सकते हैं)</b><div class="muted small">${WS === 'cj' ? 'यह प्रोडक्ट क्या है? नीचे से चुनें — उसके हिस्से (बोर्ड, ट्रे, बॉक्स…) अपने-आप आ जाएँगे।' : 'यह आइटम "Review Required" है — ऊपर कैटेगरी चुनें। ऑफसेट का काम हो तो "🖨 ऑफसेट…" चुनें, फिर ऑफसेट की कैटेगरी (जैसे शीट प्रिंटिंग)।'}</div>
+          <div class="off-quick">${pk.map(k => `<button type="button" class="btn sm" onclick="iwCatSet('${k}')"${dis}>${esc(catName(k))}</button>`).join('')}${adm ? '<button type="button" class="btn sm" onclick="offCatPick(\'__new\')">➕ नई कैटेगरी</button>' : ''}</div></div>` : ''}${`
         <div class="iw2-card">${bkCol(D, 'ITAM NAME') >= 0 ? `<label class="iw2-f off-name"><span>आइटम का नाम</span><textarea class="iw2-in" data-bk="ITAM NAME" data-t="1" rows="2"${dis}>${esc(bkVal(D, 'ITAM NAME'))}</textarea></label>` : ''}
           <div class="iw2-row">${offClientFld(jr, dis)}<label class="iw2-f"><span>📦 जॉब की मात्रा (जिस पर रेट तय)</span><input class="iw2-in" data-o="q" inputmode="numeric" value="${esc(offO().q || '')}" placeholder="जैसे 4000" onchange="offSetO(this);offDrawParts()"${dis}></label>${fldN('OFFSET RATE', '💰 पूरे आइटम का रेट ₹')}</div>
           <details class="off-adv"><summary>⚙ और (रेट किसका / फर्मा) — ज़रूरी नहीं</summary><div class="iw2-row"><label class="iw2-f"><span>रेट किसका</span><select data-o="rb" onchange="offSetO(this)"${dis}><option value="">— चुनें —</option><option value="sheet" ${offO().rb === 'sheet' ? 'selected' : ''}>प्रति शीट</option><option value="item" ${offO().rb === 'item' ? 'selected' : ''}>प्रति आइटम (पूरा सेट)</option></select></label>
@@ -7099,8 +7101,8 @@ function iwDrawOff() {
           <div class="muted small">${pick ? '⚠ ऊपर ऑफसेट की कैटेगरी चुनें' : '🖨 ' + esc(catName(cat))} · नीचे हर हिस्से (जॉब) की जानकारी — बदलते ही अपने-आप सेव <span id="offSv"></span></div></div>
         <div id="offSum" class="iw2-card off-sum"></div>
         <div id="offParts"></div>
-        ${can && !pick ? '<button type="button" class="btn" onclick="offAdd()">＋ और हिस्सा जोड़ो</button>' : ''}
-        ${pick ? '' : '<div class="iw2-card off-xf" id="offXF"></div>'}`}
+        ${can ? '<button type="button" class="btn" onclick="offAdd()">＋ और हिस्सा जोड़ो</button>' : ''}
+        ${pick ? `<div class="iw2-card"><h4>📒 Job Register की जानकारी (रेट)</h4><div class="iw2-row">${fldN('PRINT', 'कुल पेज')}${fldN('PRINT RATE', 'प्रति पेज दर ₹')}${fldN('BINDING', 'बाइंडिंग / कवर ₹')}${fldN('COLOR PAGES', 'कलर पेज')}${fldN('COLOR RATE', 'कलर दर ₹')}</div><div class="muted small">ITEM COST अभी: <b>${esc(bkVal(D, 'ITEM COST') || '—')}</b></div></div>` : ''}<div class="iw2-card off-xf" id="offXF"></div>`}
         <div class="iw2-foot">${jr ? `<button class="btn primary" id="iwSave" onclick="offFlush().then(iwSave)"${dis}>💾 सेव</button>` : `<label class="cqf"><span>मात्रा (Qty)</span><input id="bkQ" inputmode="numeric" placeholder="जैसे 2000" oninput="offSumDraw();offQtyMem()"><span id="bkQm" class="bkqm"></span></label><label class="cqf wide"><span>नोट</span><input id="bkX" placeholder="ज़रूरी हो तो"></label><button class="btn primary bk-go" id="bkGo" onclick="offBook()">📝 ऑर्डर बुक करें</button>`}</div>
       </div>
       <div class="iw-right"><div class="iw2-card pv"><div class="iw2-pvh"><h4 id="iwRh">PDF प्रीव्यू</h4><span class="iw2-sp"></span><button class="btn sm" onclick="iwFull()">⛶ पूरी स्क्रीन</button><button class="btn sm" onclick="iwDl(0)">⬇ Download</button></div>
@@ -7127,6 +7129,26 @@ function offXFDraw() {
   offAllLoad();
 }
 /* 📎 आइटम के फ़ोल्डर की सारी फ़ाइलें (ClapJoy आदि, मालिक 19-Nov): सर्वर से सूची, हर फ़ाइल Drive में खुले */
+/* 📎 ClapJoy: ALL CLIENT / CLAPJOY … / 'नंबर.नाम' फ़ोल्डर → आइटम '<पार्टी> - नंबर' (OLD फ़ोल्डर छोड़कर सारी फ़ाइलें, ZIP भी) — मालिक 20-Nov */
+async function cjFilesGo() {
+  openModal('📎 ClapJoy फ़ाइलें आइटम में', '<div id="cjfL" class="small">⏳ पहले जाँच — किस आइटम में कितनी फ़ाइलें लगेंगी…</div>');
+  const L = m => { const el = $('cjfL'); if (el) el.innerHTML += '<div>' + m + '</div>'; };
+  let r; try { r = await api('apiCjFilesRun', S.token, true); } catch (e) { L('⚠ ' + esc(e.message)); return; }
+  const c = r.cnt || {};
+  L('🔎 जाँच: <b>' + (c.items || 0) + '</b> आइटम में <b>' + (c.copied || 0) + '</b> नई फ़ाइलें लगेंगी · पहले से लगी ' + (c.skip || 0) + ' · ऐप में आइटम नहीं मिला ' + (c.noJr || 0) + (r.left ? ' · (और आइटम बाकी — असली काम में पूरे होंगे)' : ''));
+  if (!(await askYes('📎 ClapJoy के ' + (c.items || 0) + '+ आइटम में ' + (c.copied || 0) + '+ फ़ाइलें लगाऊँ?\nOLD फ़ोल्डर छोड़ा, ZIP / CDR समेत सब। पहले से लगी फ़ाइल दोबारा नहीं।', '📎 हाँ, लगाओ'))) { L('रद्द किया'); return; }
+  openModal('📎 ClapJoy फ़ाइलें आइटम में', '<div id="cjfL" class="small">⏳ फ़ाइलें लग रही हैं — हर बार ~4 मिनट, खिड़की खुली रखें…</div>');
+  let tot = 0, items = 0;
+  for (let k = 0; k < 40; k++) {
+    try { r = await api('apiCjFilesRun', S.token, false); } catch (e) { L('⚠ ' + esc(e.message) + ' — 30 सेकंड बाद फिर'); await new Promise(z => setTimeout(z, 30000)); continue; }
+    tot += (r.cnt || {}).copied || 0; items += (r.cnt || {}).items || 0;
+    L('✅ दौर ' + (k + 1) + ': ' + ((r.cnt || {}).copied || 0) + ' फ़ाइलें · ' + ((r.cnt || {}).items || 0) + ' आइटम' + (r.left ? ' · बाकी आइटम ' + r.left : ''));
+    if (!r.left) break;
+  }
+  S.offAllC = null;
+  L('<b>🎉 पूरा: ' + items + ' आइटम में ' + tot + ' फ़ाइलें लगीं।</b> हर आइटम में नीचे 📎 आइटम के फ़ोल्डर की सारी फ़ाइलें में दिखेंगी।');
+  savedNote('📎 ClapJoy: ' + items + ' आइटम में ' + tot + ' फ़ाइलें लगीं');
+}
 async function offAllLoad() {
   const code = S.wfItem; if (!code) return;
   try {
@@ -7256,10 +7278,10 @@ async function offEnsure() {
   delete S.bkCache[B.code]; return true;
 }
 async function offFlush() {
-  const B = S.bk; if (!B || !B.offP || iwCat() === 'pick') return;
+  const B = S.bk; if (!B || !B.offP) return;   /* कैटेगरी न चुनी हो तब भी हिस्से सेव (मालिक 20-Nov) */
   clearTimeout(B.offT); B.offT = 0;
   try {
-    await offEnsure();
+    if (iwCat() !== 'pick') await offEnsure();
     await api('apiItemMeta', S.token, B.code, 'JOB', { parts: B.offP, off: offO() });
     const J = S.wfDet.JOB = S.wfDet.JOB || { calc: {} }; J.calc = J.calc || {}; J.calc.parts = JSON.parse(JSON.stringify(B.offP)); J.calc.off = Object.assign({}, offO());
     delete S.bkCache[B.code]; if ($('offSv')) $('offSv').textContent = '· ✅ सेव';
