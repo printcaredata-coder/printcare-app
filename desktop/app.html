@@ -2211,10 +2211,10 @@ function logout() {
   apiRaw('apiLogout', [S.token, store.rem()]).catch(() => {});
   store.clear(); store.clearRem();
   S.full = null; S.data = null;
-  /* 🖥 डेस्कटॉप: लॉगआउट पर कंप्यूटर का डेटा नहीं मिटता (हर यूज़र का अलग रखा है) — दोबारा लॉगिन पर फिर से डाउनलोड नहीं (मालिक 20-Nov); मिटाना हो तो 💻 → हटाओ */
-  if (!window.PC_DESK) IDB.clear();
+  /* लॉगआउट पर कंप्यूटर का डेटा नहीं मिटता (हर यूज़र का अलग रखा है) — दोबारा लॉगिन पर फिर से डाउनलोड नहीं (मालिक 20-Nov); मिटाना हो तो 💻 → हटाओ */
+  /* (मालिक 20-Nov: लॉगआउट पर कहीं भी डेटा नहीं मिटता — फ़ोन / Chrome / डेस्कटॉप; सिर्फ 💻 → हटाओ से) */
   /* याद वाला सत्र / लिस्टें / पेज — सब मिटाओ (अगला व्यक्ति पिछले का न देखे) */
-  if (!window.PC_DESK) try { Object.keys(localStorage).filter(k => k === 'pc_sess' || k.indexOf('pc_bk_') === 0 || k.indexOf('pc_buy_') === 0 || k.indexOf('pc_prod_') === 0).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  if (false) try { Object.keys(localStorage).filter(k => k === 'pc_sess' || k.indexOf('pc_bk_') === 0 || k.indexOf('pc_buy_') === 0 || k.indexOf('pc_prod_') === 0).forEach(k => localStorage.removeItem(k)); } catch (e) {}
   S.buy = null; S.prod = null; S.bkCache = {}; S.spParties = null;
   showLogin();
 }
