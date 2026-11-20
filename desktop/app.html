@@ -2142,8 +2142,22 @@ async function doLogin(ev) {
 function startSession(r) {
   S.token = r.token; S.user = r.user; S.tabs = r.tabs; S.tab = null; S.data = null; useDefaults(r.defaults); S.procPre = r.procs || null;
   store.set(r.token); if (r.remember) store.setRem(r.remember);
+  if (window.PC_DESK) { deskFirstPull(() => { showMain(); loadProcs().then(sessSave); }); return; }
   showMain();
   loadProcs().then(sessSave);
+}
+/* 🖥 डेस्कटॉप: लॉगिन के बाद पहले पूरा डेटा कंप्यूटर में, फिर सॉफ़्टवेयर (मालिक 20-Nov) — पहले से डेटा हो तो सीधे */
+if (window.PC_DESK && window.pcDesk) window.pcDesk.dataDir().then(d => { S.deskDir = d; }).catch(() => {});
+async function deskFirstPull(done) {
+  let have = null; try { have = await IDB.get(LOC_KEY()); } catch (e) { have = null; }
+  if (have && have.jr) { done(); return; }
+  $('app').innerHTML = '<div class="auth-wrap"><div class="auth-side"><div class="card auth desk-pull"><div class="logo">' + fullLogo() + '</div><h1>📥 आपका डेटा आ रहा है</h1><p class="muted">पहली बार — ' + esc((S.user && S.user.name) || '') + ' का डेटा इस कंप्यूटर में उतर रहा है (फ़ाइलें नहीं)। कुछ मिनट लग सकते हैं, फिर सॉफ़्टवेयर अपने-आप खुलेगा।</p><div id="locProg"></div><div id="deskPullAct" class="actions"></div></div></div></div>';
+  try { await locPull(true); } catch (e) { S.locErr = (e && e.message) || 'गड़बड़'; }
+  if (S.locErr) {
+    const el = $('deskPullAct'); if (el) el.innerHTML = '<div class="notice warn">⚠ डेटा पूरा नहीं आया: ' + esc(S.locErr) + '</div><button class="btn primary" id="dpR">🔄 दोबारा कोशिश</button> <button class="btn" id="dpO">ऐसे ही खोलो</button>';
+    if ($('dpR')) $('dpR').onclick = () => deskFirstPull(done); if ($('dpO')) $('dpO').onclick = done; return;
+  }
+  done();
 }
 
 async function showInvite() {
@@ -5111,7 +5125,7 @@ function locDlg() {
   const L = S.loc, mb = x => (x / 1048576).toFixed(1) + ' MB', t = L && (L.checked || L.pulled);
   openModal(devTxt('💻 इस कंप्यूटर का डेटा'), devTxt(`<div class="loc-d">
     <div class="loc-s"><div><small>आइटम</small><b>${L ? fmtNum(Object.keys(L.by || {}).length) : '—'}</b></div><div><small>पार्टियाँ</small><b>${L ? fmtNum(Object.keys(L.parties || {}).length) : '—'}</b></div><div><small>जगह</small><b>${L && L.bytes ? mb(L.bytes) : '—'}</b></div><div><small>आख़िरी सिंक</small><b>${t ? new Date(t).toLocaleString('en-IN') : '—'}</b></div></div>
-    <div class="loc-box"><b>📍 कहाँ सेव होता है?</b><div class="small">इसी कंप्यूटर के ब्राउज़र (Chrome / Edge) की अंदर की सुरक्षित जगह में — नाम <b>"printcare"</b>। यह अपने-आप बनती है, अलग फ़ोल्डर चुनने की ज़रूरत नहीं; Windows में अलग फाइल नहीं दिखती, कोई दूसरा प्रोग्राम इसे नहीं खोल सकता। चाहें तो नीचे "⬇ बैकअप कॉपी" से एक फाइल Downloads फ़ोल्डर में भी रख सकते हैं।</div></div>
+    <div class="loc-box"><b>📍 कहाँ सेव होता है?</b><div class="small">${window.PC_DESK ? '🖥 आपके चुने फ़ोल्डर में: <b>' + esc(S.deskDir || '…') + '</b> — सारा डेटा यहीं, Chrome में नहीं। <button class="btn sm" onclick="window.pcDesk.openFolder()">📂 फ़ोल्डर खोलो</button> <button class="btn sm" onclick="window.pcDesk.changeDir()">📁 जगह बदलो</button>' : `इसी कंप्यूटर के ब्राउज़र (Chrome / Edge) की अंदर की सुरक्षित जगह में — नाम <b>"printcare"</b>। यह अपने-आप बनती है, अलग फ़ोल्डर चुनने की ज़रूरत नहीं; Windows में अलग फाइल नहीं दिखती, कोई दूसरा प्रोग्राम इसे नहीं खोल सकता। चाहें तो नीचे "⬇ बैकअप कॉपी" से एक फाइल Downloads फ़ोल्डर में भी रख सकते हैं।`}</div></div>
     <div class="loc-box"><b>📦 क्या-क्या रखा है</b><div class="small">✅ Job Register के सारे आइटम (आपके कॉलम) · ✅ हर आइटम के काम, कैटेगरी, छपाई / साइज़, फाइलों के नाम / लिंक, रेट (जिन्हें अधिकार है) · ✅ पार्टियाँ (नई भी) · ✅ Workflow (खरीद / बाहर / घर का काम) · ✅ प्रोडक्शन (तारा / काम की गिनती) · ✅ सारी शीटें पूरी (Job Register / Order Booking / Billing / बाकी — आपके अधिकार वाली)<br>❌ असली फाइलें (PDF / CDR) — वो खोलते समय Drive से आती हैं</div></div>
     <div class="loc-box"><b>🔄 डाउनलोड</b><div id="locProg"></div></div>
     <div class="muted small">हर 1½ मिनट में पीछे से अपने-आप देखता है कि शीट में कुछ बदला क्या — बदला हो तो <b>सिर्फ वही हिस्सा</b> लाता है, बाकी पहले वाला ही रहता है (बार-बार पूरा डाउनलोड नहीं)।</div>
