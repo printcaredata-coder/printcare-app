@@ -2075,6 +2075,8 @@ async function bootApp(msg, uname) {
 
 function showLogin(msg, uname) {
   S.token = null;
+  if (!uname) { try { uname = localStorage.getItem('pc_lastU') || ''; } catch (e) { uname = ''; } }
+  setTimeout(() => { const p = $('lp'), u = $('lu'); if (u && u.value && p) p.focus(); }, 80);
   $('app').innerHTML = `<div class="auth-wrap">${brandPanel()}<div class="auth-side"><div class="card auth">
     <div class="logo">${fullLogo()}</div><h1>लॉगिन करें</h1>
     <p class="muted">अपने यूज़रनेम और पासवर्ड से लॉगिन करें</p>
@@ -2132,6 +2134,7 @@ async function doLogin(ev) {
   busy('lb', true, 'लॉगिन हो रहा है…');
   try {
     const r = await api('apiLogin', $('lu').value, $('lp').value);
+    try { localStorage.setItem('pc_lastU', String($('lu').value || '').trim()); } catch (x) {}   /* अगली बार यूज़रनेम पहले से भरा (मालिक 20-Nov) */
     startSession(r);
   } catch (e) {
     $('notice').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
