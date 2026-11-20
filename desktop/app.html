@@ -8687,6 +8687,7 @@ function bkpAttach(code, slot) {
   inp.onchange = async () => {
     const file = inp.files && inp.files[0]; if (!file) return;
     const label = slot === 'color' ? 'कलर फ़ाइल' : 'B/W फ़ाइल', CH = 4 * 1048576;
+    if (S.bkpQuota && Date.now() - S.bkpQuota < 600000) { toast('⛔ Google की रोज़ की सीमा खत्म है — फ़ाइल लगाना कल दोपहर करीब 1:30 बजे के बाद चलेगा', true); return; }
     bkpUpSet(code, 1);
     try {
       const st = await api('apiWfFileStart', S.token, code, 'TARA', slot, label, file.name, file.type || 'application/pdf', file.size, '');
@@ -8704,7 +8705,7 @@ function bkpAttach(code, slot) {
       S.bkpD = await api('apiBkpData', S.token); bkpCacheSave();
       toast('✅ ' + label + ' लग गई — तारा को दिखेगी');
       bkpUpSet(code, null);
-    } catch (e) { bkpUpSet(code, null); fail(e); }
+    } catch (e) { bkpUpSet(code, null); if (/too many times|urlfetch/i.test(String(e && e.message))) { S.bkpQuota = Date.now(); toast('⛔ Google की रोज़ की सीमा खत्म है — फ़ाइल लगाना कल दोपहर करीब 1:30 बजे के बाद चलेगा', true); } else fail(e); }
   };
   inp.click();
 }
