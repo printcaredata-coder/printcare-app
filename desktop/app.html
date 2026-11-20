@@ -1777,7 +1777,8 @@
   .lg-inst { text-align: center; margin-top: 12px; }
   .lg-inst .inst-btn { margin: 0 auto; }
 /* 📁 सारे क्लाइंट */
-.fs-page{padding:10px 14px}
+#main:has(> .fs-page){align-self:stretch;width:100%;max-width:none;box-sizing:border-box}
+.fs-page{padding:10px 14px;width:100%;box-sizing:border-box}
 .fs-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
 .fs-cr{font-size:15px}.fs-cr .link{font-size:15px}
 .fs-tg{display:inline-flex;border:1px solid var(--line,#ccd);border-radius:8px;overflow:hidden}
@@ -1786,7 +1787,7 @@
 .fs-q{min-width:180px;padding:6px 8px;border:1px solid var(--line,#ccd);border-radius:8px}
 .fs-wrap{display:block}.fs-wrap.two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px}
 .fs-list.drop{outline:2px dashed var(--brand,#1f6feb);outline-offset:4px}
-.fs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.fs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
 .fs-fold{display:flex;gap:8px;align-items:center;text-align:left;padding:10px;border:1px solid var(--line,#dde);border-radius:10px;background:var(--card,#fff);cursor:pointer;font:inherit}
 .fs-fold:hover{border-color:var(--brand,#1f6feb)}.fs-fold span{font-size:22px}.fs-fold.noitem{background:#fff8e6}
 .fs-rows{display:flex;flex-direction:column;gap:4px}
