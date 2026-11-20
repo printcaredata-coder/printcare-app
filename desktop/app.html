@@ -1776,6 +1776,27 @@
   .fbar .btn.on { background: #13265a; color: #fff; }
   .lg-inst { text-align: center; margin-top: 12px; }
   .lg-inst .inst-btn { margin: 0 auto; }
+/* 📁 सारे क्लाइंट */
+.fs-page{padding:10px 14px}
+.fs-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.fs-cr{font-size:15px}.fs-cr .link{font-size:15px}
+.fs-tg{display:inline-flex;border:1px solid var(--line,#ccd);border-radius:8px;overflow:hidden}
+.fs-tg button{border:0;background:transparent;padding:6px 10px;cursor:pointer;font:inherit}
+.fs-tg button.on{background:var(--brand,#1f6feb);color:#fff}
+.fs-q{min-width:180px;padding:6px 8px;border:1px solid var(--line,#ccd);border-radius:8px}
+.fs-wrap{display:block}.fs-wrap.two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px}
+.fs-list.drop{outline:2px dashed var(--brand,#1f6feb);outline-offset:4px}
+.fs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.fs-fold{display:flex;gap:8px;align-items:center;text-align:left;padding:10px;border:1px solid var(--line,#dde);border-radius:10px;background:var(--card,#fff);cursor:pointer;font:inherit}
+.fs-fold:hover{border-color:var(--brand,#1f6feb)}.fs-fold span{font-size:22px}.fs-fold.noitem{background:#fff8e6}
+.fs-rows{display:flex;flex-direction:column;gap:4px}
+.fs-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line,#e3e3ea);border-radius:8px;background:var(--card,#fff);cursor:default}
+.fs-row.sel{border-color:var(--brand,#1f6feb);box-shadow:0 0 0 2px rgba(31,111,235,.15)}
+.fs-nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 220px;text-align:left}
+.fs-ok{font-size:16px}.fs-who{max-width:190px}.fs-act{display:inline-flex;gap:4px;margin-left:auto}
+.fs-pv{position:sticky;top:8px;align-self:start}
+.fs-help{margin-top:10px}.fs-un summary{cursor:pointer;margin:8px 0 4px}
+@media (max-width:900px){.fs-wrap.two{grid-template-columns:1fr}.fs-pv{position:static}}
 </style>
 
 </head>
@@ -2391,9 +2412,10 @@ function drawNav() {
   n.innerHTML = `<div class="side-logo">${logo(36)}<span class="si-tx">${WS === 'cj' ? '🧸 <b>ClapJoy</b>' : 'Print <b>Care</b>'}</span></div>` +
     mobItems().filter(x => x.k !== 'settings').map(x => item(x.k.indexOf('tab:') === 0 ? S.view === 'data' && S.tab === x.k.slice(4) : S.view === x.k, String(x.ic).indexOf('<') === 0 || String(x.ic).length > 4 ? x.ic : '<span class="nav-emo">' + x.ic + '</span>', x.k === 'stock' ? 'स्टॉक नोट' : x.t, x.go)).join('') +
     (S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna') ? item(false, '<span class="nav-emo">🕘</span>', 'हाज़िरी', 'attOpen()') : '') +
+    (fsCan() ? item(S.view === 'files', '<span class="nav-emo">📁</span>', 'सारे क्लाइंट', "setView('files')") : '') +
     '<div class="side-gap"></div>' + (S.user && S.user.simple ? '' :
     item(S.view === 'settings' || S.view === 'users', navIc('icon-settings', '⚙️'), 'ऐप सेटिंग', "setView('settings')"));
-  const titles = { home: '🏠 होम', settings: '⚙️ ऐप सेटिंग', users: '👥 यूज़र और परमिशन', prod: '🏭 प्रोडक्शन — आज क्या बाकी', buy: '🧾 Workflow — खरीद / बाहर / घर', rates: '📒 रेट मास्टर — हर काम का रेट एक जगह', stock: '📦 स्टॉक नोट — तारा फैक्ट्री' };
+  const titles = { files: '📁 सारे क्लाइंट', home: '🏠 होम', settings: '⚙️ ऐप सेटिंग', users: '👥 यूज़र और परमिशन', prod: '🏭 प्रोडक्शन — आज क्या बाकी', buy: '🧾 Workflow — खरीद / बाहर / घर', rates: '📒 रेट मास्टर — हर काम का रेट एक जगह', stock: '📦 स्टॉक नोट — तारा फैक्ट्री' };
   if ($('pageTitle') && !(S.view === 'data' && $('pageTitle').querySelector('#tb2'))) $('pageTitle').innerHTML = S.view === 'data' ? tabIcon(S.tab) + ' ' + esc(S.tab) : (titles[S.view] || '');
   drawMobNav(); drawBell();
 }
@@ -2444,6 +2466,7 @@ async function setView(v) {
   S.view = v; if (v !== 'data' && $('xlTabs')) $('xlTabs').remove();
   closePop();
   drawNav();
+  if (v === 'files') return renderFs();
   if (S.user && S.user.simple) {
     if (!(v === 'buy' || (v === 'data' && (S.tabs || []).indexOf(S.tab) >= 0))) {   /* Workflow / Billing — सिर्फ नए ऑर्डर (सर्वर छाँटता है) */
       if (['home', 'sjr', 'sob', 'pw'].indexOf(v) < 0) v = 'home';
@@ -7149,6 +7172,136 @@ async function cjFilesGo() {
   L('<b>🎉 पूरा: ' + items + ' आइटम में ' + tot + ' फ़ाइलें लगीं।</b> हर आइटम में नीचे 📎 आइटम के फ़ोल्डर की सारी फ़ाइलें में दिखेंगी।');
   savedNote('📎 ClapJoy: ' + items + ' आइटम में ' + tot + ' फ़ाइलें लगीं');
 }
+/* 📁 सारे क्लाइंट (मालिक 20-Nov): कंप्यूटर के ALL CLIENT जैसा — क्लाइंट → आइटम → फ़ाइलें। हमेशा ✅ Used (ताज़ा) पहले; 🗃 Unused अलग।
+ * कोई फ़ाइल मिटती नहीं: Delete = Unused में। ✅ = किसी खाने में लगी है (ऊपर रखो तो कहाँ)। Ctrl+V / खींचकर डालो = अपलोड। */
+const FS_NOITEM = '📂 बिना आइटम';
+const FS_SLOTS = [['TARA', 'inner', '⚫ तारा प्रिंट (अंदर के पेज)'], ['TARA', 'color', '🎨 कलर पेज'], ['TARA', 'cover', '📕 कवर'], ['TARA', 'cdr', '🎨 CDR'], ['OFFSET', 'prn', '🖨 ऑफ़सेट प्रिंटिंग']];
+function fsCan() { return !!(S.user && !S.asUser && (S.user.role === 'Admin' || S.user.simple || S.user.design)); }
+function fsSt() { return S.fs || (S.fs = { party: '', code: '', mode: 'used', q: '', att: '', sel: -1, C: {} }); }
+function fsIc(n) { return /\.pdf$/i.test(n) ? '📄' : /\.(cdr|ai|psd)$/i.test(n) ? '🎨' : /\.(zip|rar|7z)$/i.test(n) ? '🗜' : /\.(jpe?g|png|gif|webp|tiff?)$/i.test(n) ? '🖼' : '📎'; }
+function fsGo(party, code) { const F = fsSt(); F.party = party || ''; F.code = code || ''; F.sel = -1; F.q = ''; if (!code) F.mode = 'used'; renderFs(); }
+function fsGoI(k) { const F = fsSt(), x = (F.L || {}).folders[k]; if (!x) return; F.party ? fsGo(F.party, x.name) : fsGo(x.name, ''); }
+async function fsLoad(force) {
+  const F = fsSt(), key = [F.party, F.code, F.mode].join('|'), c = F.C[key];
+  if (!force && c && Date.now() - c.at < 60000) return c.L;
+  const L = await api('apiFsList', S.token, F.party, F.code, F.mode); F.C[key] = { at: Date.now(), L }; return L;
+}
+async function renderFs() {
+  if (!fsCan()) return setView('home');
+  const F = fsSt(), m = $('main'); S.view = 'files';
+  const cr = ['<button class="link" onclick="fsGo()">📁 सारे क्लाइंट</button>'];
+  if (F.party) cr.push('<button class="link" onclick="fsGo(fsSt().party)">' + esc(F.party) + '</button>');
+  if (F.code) cr.push('<b>' + esc(F.code) + '</b>');
+  const tg = F.code ? '<span class="fs-tg"><button class="' + (F.mode === 'used' ? 'on' : '') + '" onclick="fsMode(\'used\')">✅ Used (ताज़ा)</button><button class="' + (F.mode === 'unused' ? 'on' : '') + '" onclick="fsMode(\'unused\')">🗃 Unused (पुरानी)</button></span>' +
+    '<select class="fs-af" onchange="fsSt().att=this.value;fsDraw()"><option value="">सब फ़ाइलें</option><option value="on"' + (F.att === 'on' ? ' selected' : '') + '>✅ जो लगी हैं</option><option value="off"' + (F.att === 'off' ? ' selected' : '') + '>⬜ जो नहीं लगीं</option></select>' : '';
+  m.innerHTML = '<div class="fs-page" id="fsPage"><div class="fs-bar"><span class="fs-cr">' + cr.join(' <span class="muted">›</span> ') + '</span>' + tg +
+    '<span class="iw2-sp"></span><input id="fsQ" class="fs-q" placeholder="🔍 नाम से खोजें" value="' + esc(F.q) + '" oninput="fsSt().q=this.value;fsDraw()">' +
+    (F.code ? '<label class="btn sm">📤 फ़ाइल डालो<input type="file" hidden multiple onchange="fsUpFiles(this.files);this.value=\'\'"></label>' : '') +
+    '<button class="btn sm" onclick="fsReload()" title="ताज़ा करें">🔄</button></div>' +
+    '<div class="fs-wrap' + (F.code ? ' two' : '') + '"><div id="fsList" class="fs-list"><div class="loading">लोड हो रहा है…</div></div>' +
+    (F.code ? '<div class="fs-pv iw2-card"><div class="iw2-pvh"><h4 id="fsPh">प्रीव्यू</h4></div><div id="fsPrev" class="pdfhost iw-pv">' + emptyArt('empty-files', 'किसी फ़ाइल पर क्लिक करें — यहाँ दिखेगी') + '</div></div>' : '') + '</div>' +
+    (F.code ? '<div class="muted small fs-help">⌨ फ़ाइल चुनकर <b>Delete</b> = Unused में (मिटती नहीं) · <b>Ctrl+V</b> या खींचकर डालो = इसी आइटम में अपलोड · ✅ = किसी खाने में लगी है</div>' : '') + '</div>';
+  const lst = $('fsList');
+  if (F.code && lst) { lst.ondragover = e => { e.preventDefault(); lst.classList.add('drop'); }; lst.ondragleave = () => lst.classList.remove('drop'); lst.ondrop = e => { e.preventDefault(); lst.classList.remove('drop'); fsUpFiles(e.dataTransfer.files); }; }
+  try { F.L = await fsLoad(); } catch (e) { if ($('fsList')) $('fsList').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; return; }
+  fsDraw();
+}
+function fsMode(m) { const F = fsSt(); F.mode = m; F.sel = -1; renderFs(); }
+function fsReload() { const F = fsSt(); F.C = {}; renderFs(); }
+function fsDraw() {
+  const F = fsSt(), el = $('fsList'), L = F.L; if (!el || !L) return;
+  const q = String(F.q || '').trim().toLowerCase();
+  if (!F.code) {
+    const fo = L.folders.map((x, k) => ({ x, k })).filter(o => !q || o.x.name.toLowerCase().indexOf(q) >= 0);
+    el.innerHTML = fo.length ? '<div class="fs-grid">' + fo.map(o => '<button class="fs-fold' + (o.x.name === FS_NOITEM ? ' noitem' : '') + '" onclick="fsGoI(' + o.k + ')"><span>' + (o.x.name === FS_NOITEM ? '📂' : '📁') + '</span><b>' + esc(o.x.name) + '</b></button>').join('') + '</div>'
+      : emptyArt('empty-files', F.party ? 'इस क्लाइंट का अभी कोई फ़ोल्डर नहीं' : 'अभी कोई क्लाइंट फ़ोल्डर नहीं');
+    return;
+  }
+  const fl = L.files.map((f, i) => ({ f, i })).filter(o => (!q || o.f.name.toLowerCase().indexOf(q) >= 0) && (!F.att || (F.att === 'on') === !!(o.f.on && o.f.on.length)));
+  if (!fl.length) { el.innerHTML = emptyArt('empty-files', F.mode === 'unused' ? '🗃 Unused में कोई फ़ाइल नहीं' : 'कोई फ़ाइल नहीं — Ctrl+V या 📤 से डालें'); return; }
+  const noI = F.code === FS_NOITEM, can = !(S.user && S.user.viewonly);
+  el.innerHTML = '<div class="fs-rows">' + fl.map(({ f, i }) => {
+    const on = f.on || [], tip = on.map(a => a.label || (FS_SLOTS.find(s => s[0] === a.proc && s[1] === a.slot) || [0, 0, a.proc + ' / ' + a.slot])[2]).join(', ');
+    const cur = on[0] ? on[0].proc + '|' + on[0].slot : '';
+    const sel = noI ? '' : '<select class="fs-who" onchange="fsWho(' + i + ',this.value)"' + (can && F.mode === 'used' ? '' : ' disabled') + '><option value="">— किसकी है —</option>' + FS_SLOTS.map(s => '<option value="' + s[0] + '|' + s[1] + '"' + (cur === s[0] + '|' + s[1] ? ' selected' : '') + '>' + s[2] + '</option>').join('') + (cur ? '<option value="x">✖ कहीं नहीं (हटाओ)</option>' : '') + '</select>';
+    const hist = f.hist ? '<span class="muted small" title="पहले लगी थी">🕘 ' + esc(f.hist.until || '') + (f.hist.untilJob ? ' · JOB ' + esc(f.hist.untilJob) : '') + ' तक</span>' : '';
+    return '<div class="fs-row' + (F.sel === i ? ' sel' : '') + '" onclick="fsSel(' + i + ')" ondblclick="fsOpen(' + i + ')">' +
+      '<span class="fs-ok" title="' + esc(tip ? 'लगी है: ' + tip : 'किसी खाने में नहीं लगी') + '">' + (on.length ? '✅' : '⬜') + '</span>' +
+      '<button type="button" class="iw-fn fs-nm" onclick="event.stopPropagation();fsSel(' + i + ');fsOpen(' + i + ')" title="' + esc(f.name) + '">' + fsIc(f.name) + ' ' + esc(f.name) + '</button>' +
+      '<span class="muted small">' + (f.size / 1048576).toFixed(1) + ' MB · ' + esc(f.at || '') + '</span>' + hist + sel +
+      (can ? '<span class="fs-act"><button class="btn sm" onclick="event.stopPropagation();fsRen(' + i + ')" title="नाम बदलो">✏ नाम</button>' +
+        '<button class="btn sm" onclick="event.stopPropagation();fsMoveAsk(' + i + ')" title="दूसरे आइटम में डालो">➡ दूसरे आइटम में</button>' +
+        (F.mode === 'used' ? '<button class="btn sm" onclick="event.stopPropagation();fsUnuse(' + i + ')" title="Unused में (मिटती नहीं)">🗃 Unused</button>' : '<button class="btn sm" onclick="event.stopPropagation();fsRestore(' + i + ')" title="वापस Used में">♻ वापस</button>') + '</span>' : '') +
+      '</div>';
+  }).join('') + '</div>';
+}
+function fsSel(i) { const F = fsSt(); F.sel = i; document.querySelectorAll('.fs-row.sel').forEach(r => r.classList.remove('sel')); const rows = document.querySelectorAll('.fs-row'); rows.forEach(r => { if (r.getAttribute('onclick') === 'fsSel(' + i + ')') r.classList.add('sel'); }); }
+async function fsOpen(i) {
+  const F = fsSt(), f = ((F.L || {}).files || [])[i], box = $('fsPrev'); if (!f || !box) return;
+  if ($('fsPh')) $('fsPh').innerHTML = fsIc(f.name) + ' <b>' + esc(f.name) + '</b>';
+  if (!/\.(pdf|jpe?g|png|gif|webp|txt)$/i.test(f.name)) { box.innerHTML = emptyArt('empty-files', fsIc(f.name) + ' ' + esc(f.name) + ' — इसका प्रीव्यू ऐप में नहीं दिखता (' + (f.size / 1048576).toFixed(1) + ' MB)'); return; }
+  box.innerHTML = '<div class="progress" style="margin-top:8px"><div id="fsBar" class="progress-bar"></div><span id="fsPct">फ़ाइल खुल रही है…</span></div>';
+  const prog = (g, t) => { if ($('fsBar') && t) { $('fsBar').style.width = Math.round(100 * g / t) + '%'; $('fsPct').textContent = (g / 1048576).toFixed(1) + ' / ' + (t / 1048576).toFixed(1) + ' MB'; } };
+  const party = F.party, code = F.code;
+  try {
+    const key = 'if_' + f.id + '_' + (f.size || ''), hit = await fileCacheGet(key);
+    const r = hit || await downloadParts((st, len) => api('apiFsPart', S.token, party, code, f.id, st, len), key, prog);
+    const R = { name: r.name || f.name, mime: r.mime, bytes: new Uint8Array(r.bytes), blob: new Blob([r.bytes], { type: r.mime }) };
+    if ($('fsPrev') && fsSt().code === code) await renderFileInto($('fsPrev'), R);
+  } catch (e) { if ($('fsPrev')) $('fsPrev').innerHTML = '<div class="empty">' + esc(e.message || 'फ़ाइल नहीं खुली') + '</div>'; }
+}
+async function fsAfter(msg) { const F = fsSt(); F.C = {}; S.offAllC = null; try { F.L = await fsLoad(true); } catch (e) {} fsDraw(); if (msg) toast(msg); }
+async function fsWho(i, v) {
+  const F = fsSt(), f = F.L.files[i]; if (!f) return;
+  try {
+    if (v === 'x' || !v) { for (const a of (f.on || [])) await api('apiFsUnassign', S.token, F.code, a.proc, a.slot); return fsAfter('✖ खाने से हटाई — फ़ाइल फ़ोल्डर में ही है'); }
+    const s = FS_SLOTS.find(x => x[0] + '|' + x[1] === v);
+    await api('apiFsAssign', S.token, F.code, f.id, s[0], s[1], s[2]);
+    fsAfter('✅ ' + s[2] + ' में लगी (पुरानी वाली Unused में)');
+  } catch (e) { toast(e.message, true); fsDraw(); }
+}
+async function fsUnuse(i) {
+  const F = fsSt(), f = F.L.files[i]; if (!f) return;
+  if (!(await askYes('🗃 "' + f.name + '" Unused में डालें?' + (f.on && f.on.length ? '\nयह किसी खाने में लगी है — वहाँ से भी हट जाएगी।' : '') + '\n(मिटेगी नहीं — 🗃 Unused से ♻ वापस ला सकते हैं)', '🗃 हाँ, Unused में'))) return;
+  try { await api('apiFsUnuse', S.token, F.code, f.id, F.party); fsAfter('🗃 Unused में गई'); } catch (e) { toast(e.message, true); }
+}
+async function fsRestore(i) { const F = fsSt(), f = F.L.files[i]; if (!f) return; try { await api('apiFsRestore', S.token, F.code, f.id); fsAfter('♻ वापस Used में'); } catch (e) { toast(e.message, true); } }
+async function fsRen(i) {
+  const F = fsSt(), f = F.L.files[i]; if (!f) return;
+  const n = await askWhy('✏ नया नाम', 'फ़ाइल का नाम', f.name); if (!n || n.trim() === f.name) return;
+  try { await api('apiFsRename', S.token, F.code, f.id, n.trim()); fsAfter('✏ नाम बदला'); } catch (e) { toast(e.message, true); }
+}
+async function fsMoveAsk(i) {
+  const F = fsSt(), f = F.L.files[i]; if (!f) return;
+  const to = await askWhy('➡ किस आइटम में डालें? (ITAM CODE लिखें)', 'जैसे ' + (F.party || 'Amit Popli') + ' - 5', F.code === FS_NOITEM ? F.party + ' - ' : ''); if (!to || !to.trim()) return;
+  try { await api('apiFsMove', S.token, F.party, F.code, f.id, to.trim()); fsAfter('➡ ' + to.trim() + ' में गई'); } catch (e) { toast(e.message, true); }
+}
+async function fsUpFiles(files) {
+  const F = fsSt(); files = Array.from(files || []); if (!F.code || !files.length) return;
+  const CH = 4 * 1048576;
+  for (const file of files) {
+    toast('📤 ' + file.name + ' — 0%');
+    try {
+      const st = await api('apiFsUpStart', S.token, F.code, file.name, file.type, file.size, F.party);
+      if (!st.done) for (let s2 = 0; s2 < file.size; s2 += CH) {
+        const b64 = await blobB64(file.slice(s2, Math.min(file.size, s2 + CH)));
+        let tries = 0; for (;;) { try { await api('apiFolderUploadChunk', S.token, st.uploadId, s2, b64); break; } catch (e) { if (++tries >= 3) throw e; await new Promise(z => setTimeout(z, 1500 * tries)); } }
+        toast('📤 ' + file.name + ' — ' + Math.round(100 * Math.min(file.size, s2 + CH) / file.size) + '%');
+      }
+    } catch (e) { toast('⚠ ' + file.name + ': ' + e.message, true); }
+  }
+  fsAfter('📤 ' + files.length + ' फ़ाइल डाली — "किसकी है" से खाना चुनें');
+}
+document.addEventListener('keydown', e => {
+  if (S.view !== 'files' || e.key !== 'Delete') return;
+  const t = e.target; if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+  const F = fsSt(); if (F.code && F.sel >= 0 && F.mode === 'used') { e.preventDefault(); fsUnuse(F.sel); }
+});
+document.addEventListener('paste', e => {
+  if (S.view !== 'files' || !fsSt().code) return;
+  const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
+  const fl = e.clipboardData && e.clipboardData.files; if (fl && fl.length) { e.preventDefault(); fsUpFiles(fl); }
+});
 async function offAllLoad() {
   const code = S.wfItem; if (!code) return;
   try {
@@ -7158,7 +7311,10 @@ async function offAllLoad() {
     if (!L || !L.length) { el.innerHTML = ''; return; }
     S.offAllL = L;
     /* 👁 दाईं तरफ़, क्लिक = ऐप के अंदर ही खुले (मालिक 20-Nov) */
-    el.innerHTML = '<h4>📎 आइटम के फ़ोल्डर की सारी फ़ाइलें (' + L.length + ')</h4>' + L.map((f, i) => '<div class="off-fr"><button type="button" class="iw-fn" onclick="itemFileShow(' + i + ')">' + (/.pdf$/i.test(f.name) ? '📄 ' : /.(cdr|ai)$/i.test(f.name) ? '🎨 ' : /.(zip|rar)$/i.test(f.name) ? '🗜 ' : '📎 ') + esc(f.name) + '</button><span class="muted small">' + (f.size / 1048576).toFixed(1) + ' MB · ' + esc(f.at || '') + '</span></div>').join('');
+    const row = (f, i) => '<div class="off-fr"><button type="button" class="iw-fn" onclick="itemFileShow(' + i + ')">' + fsIc(f.name) + ' ' + esc(f.name) + '</button><span class="muted small">' + (f.size / 1048576).toFixed(1) + ' MB · ' + esc(f.at || '') + '</span></div>';
+    const U = L.map((f, i) => ({ f, i })), used = U.filter(o => !o.f.u), un = U.filter(o => o.f.u);   /* ✅ ताज़ा ऊपर; 🗃 पुरानी नीचे — ताज़ा न हो तो पुरानी खुली (मालिक 20-Nov) */
+    el.innerHTML = '<h4>📎 आइटम की फ़ाइलें (' + used.length + ')</h4>' + used.map(o => row(o.f, o.i)).join('') +
+      (un.length ? '<details class="fs-un"' + (used.length ? '' : ' open') + '><summary>🗃 Unused — पुरानी फ़ाइलें (' + un.length + ')</summary>' + un.map(o => row(o.f, o.i)).join('') + '</details>' : '');
   } catch (e) { /* सूची न मिले तो चुप */ }
 }
 async function itemFileShow(i) {
