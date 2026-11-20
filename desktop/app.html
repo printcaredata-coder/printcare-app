@@ -2368,7 +2368,7 @@ function showMain() {
       <div class="erp-main">
         <header class="top">
           <div class="page-title" id="pageTitle"></div>
-          <div class="who"><span id="wsSlot">${wsBtn()}</span>${(S.realUser || S.user).role === 'Admin' ? `<button class="btn sm pv-btn${S.asUser ? ' on' : ''}" onclick="panelMenu(this)" title="किसी यूज़र का पैनल ठीक उसी की तरह देखें">👁 पैनल${S.asUser ? ': ' + esc(S.user.name) : ''} ⌄</button>` : ''}<button class="btn sm loc-btn" id="locBtn" onclick="locDlg()" title="${devTxt('इस कंप्यूटर का डेटा')}">${devTxt('💻')} …</button><span class="uname desk-only">👤 ${esc(S.user.name)}</span>${S.user.role === 'Admin' ? '<span class="badge info desk-only">Admin</span>' : ''}
+          <div class="who"><button class="btn sm ghost rl-btn" onclick="appReload()" title="ऐप ताज़ा करो (Ctrl + R)">🔄</button><span id="wsSlot">${wsBtn()}</span>${(S.realUser || S.user).role === 'Admin' ? `<button class="btn sm pv-btn${S.asUser ? ' on' : ''}" onclick="panelMenu(this)" title="किसी यूज़र का पैनल ठीक उसी की तरह देखें">👁 पैनल${S.asUser ? ': ' + esc(S.user.name) : ''} ⌄</button>` : ''}<button class="btn sm loc-btn" id="locBtn" onclick="locDlg()" title="${devTxt('इस कंप्यूटर का डेटा')}">${devTxt('💻')} …</button><span class="uname desk-only">👤 ${esc(S.user.name)}</span>${S.user.role === 'Admin' ? '<span class="badge info desk-only">Admin</span>' : ''}
             ${S.user.stock ? '<button class="btn ghost sm bell-btn" onclick="openBell()" title="सूचनाएँ">🔔<i class="bell-n hidden"></i></button>' : ''}<button class="btn ghost sm lang-btn desk-only" onclick="langToggle()" title="हिंदी / English">🌐 ${LANG === 'en' ? 'HI' : 'EN'}</button><button class="btn ghost sm desk-only out-btn" onclick="logout()">लॉगआउट</button><button class="btn ghost sm mob-only" onclick="openRecents()" title="हाल में खोले पेज">🗂</button><button class="btn ghost sm mob-only" onclick="openMobMenu()" title="मेन्यू">⋮</button></div>
         </header>
         ${panelBanner()}<main id="main"></main>
@@ -2983,7 +2983,7 @@ async function renderHome() {
     <div class="home3">${(S.user.design ? [] : BUY_PAGES).map(p => `<button class="h3c" onclick="buyOpen('${p[0]}')"><b>${p[1]}</b><small>${p[2]}</small></button>`).join('')}${S.user.stock ? '<button class="h3c" onclick="setView(\'stock\')"><b>📦 स्टॉक नोट</b><small>तारा फैक्ट्री से आए फोटो + नोट</small></button>' : ''}<button class="h3c later" onclick="openLater()"><b>⏳ रेट बाकी</b><small>जिन आइटम में काम टिक है पर रेट बाद में भरना है</small></button></div>
     <div class="kpis" id="kpis">${S.tabs.map(t => `<div class="kpi skel"><div class="k-ic">${tabIcon(t)}</div><div><div class="k-t">${esc(t)}</div><div class="k-n">…</div></div></div>`).join('')}</div>
     <div class="home-grid"><div class="card"><h3>🕘 हाल की एंट्री</h3><div id="recent" class="loading small">लोड हो रहा है…</div></div>
-      <div class="card"><h3>⚡ जल्दी जाएँ</h3><div class="quick">${S.tabs.map((t, i) => `<button class="btn" onclick="selectTab(${i})">${tabIcon(t)} ${esc(t)}</button>`).join('')}${S.user && S.user.role === 'Admin' && !S.asUser && !WS ? '<button class="btn" onclick="cjFilesGo()" title="Drive (ALL CLIENT) के ClapJoy फ़ोल्डर की फ़ाइलें आइटम में">📎 ClapJoy फ़ाइलें लगाओ</button>' : ''}
+      <div class="card"><h3>⚡ जल्दी जाएँ</h3><div class="quick">${S.tabs.map((t, i) => `<button class="btn" onclick="selectTab(${i})">${tabIcon(t)} ${esc(t)}</button>`).join('')}
         <button class="btn" onclick="setView('settings')">⚙️ ऐप सेटिंग</button></div></div></div></div>`;
   const day0 = new Date(); day0.setHours(0, 0, 0, 0);
   const today = day0.getTime(), week = today - 6 * 864e5, month = new Date(day0.getFullYear(), day0.getMonth(), 1).getTime();
@@ -9587,7 +9587,15 @@ document.addEventListener('keydown', e => {
   if ($('pmOver')) return closePaperMaster();
   if ($('pop')) return closePop();
   if (modalOpen()) return wfGoBack();
+  /* ⌫ एक कदम पीछे (मालिक 20-Nov): जहाँ से खोला था वहीं — शीट में खाना चुना हो तो Backspace खाना साफ़ करता है (पहले जैसा) */
+  const dl = document.querySelectorAll('.effdlg'); if (dl.length) { dl[dl.length - 1].remove(); return; }
+  if (document.querySelector('.scroll td.cell-on') || (S.rng && S.rng.row)) return;
+  if (S.navStk && S.navStk.length) { const p = S.navStk.pop(); S.navBack = 1; try { if (p.v === 'data' && p.t && (S.tabs || []).indexOf(p.t) >= 0) selectTab(S.tabs.indexOf(p.t)); else setView(p.v); } finally { S.navBack = 0; } }
+  else if (S.view !== 'home') { S.navBack = 1; try { setView('home'); } finally { S.navBack = 0; } }
 });
+/* 🔄 Ctrl + R / F5 = ऐप ताज़ा (डेस्कटॉप में नया रूप भी) — मालिक 20-Nov */
+function appReload() { if (window.pcDesk && window.pcDesk.reloadUI) { toast('🔄 ऐप ताज़ा हो रहा है…'); window.pcDesk.reloadUI(); } else location.reload(); }
+document.addEventListener('keydown', e => { if ((e.key === 'F5') || ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'r' || e.key === 'R'))) { e.preventDefault(); appReload(); } });
 function scrollParent(el) { let p = el && el.parentElement; while (p && p !== document.body) { const o = getComputedStyle(p).overflowY; if ((o === 'auto' || o === 'scroll') && p.scrollHeight > p.clientHeight) return p; p = p.parentElement; } return document.scrollingElement; }
 function wfGoBack() {
   const b = (S.wfBack || []).pop();
