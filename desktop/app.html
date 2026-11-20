@@ -404,6 +404,8 @@
   .scroll.fit tr.names th { padding-right: 22px !important; }
   .erp-main { min-width: 0; }
   #main { min-width: 0; max-width: 100%; overflow-x: hidden; }
+  /* 🖥 डेस्कटॉप पर पूरी चौड़ाई (मालिक 20-Nov: "मोबाइल जैसा लगता है, दाएँ-बाएँ खाली जगह") */
+  @media (min-width: 900px) { .erp-main > #main { align-self: stretch; width: 100%; max-width: none; box-sizing: border-box; } }
   #main > div, #tableWrap, .fxbar { min-width: 0; max-width: 100%; }
   .toolbar.one { max-width: 100%; overflow-x: auto; }
   .fxbar .fxval { min-width: 0; }
@@ -1787,9 +1789,11 @@
 .fs-q{min-width:180px;padding:6px 8px;border:1px solid var(--line,#ccd);border-radius:8px}
 .fs-wrap{display:block}.fs-wrap.two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px}
 .fs-list.drop{outline:2px dashed var(--brand,#1f6feb);outline-offset:4px}
-.fs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
-.fs-fold{display:flex;gap:8px;align-items:center;text-align:left;padding:10px;border:1px solid var(--line,#dde);border-radius:10px;background:var(--card,#fff);cursor:pointer;font:inherit}
-.fs-fold:hover{border-color:var(--brand,#1f6feb)}.fs-fold span{font-size:22px}.fs-fold.noitem{background:#fff8e6}
+.fs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:4px}
+.fs-fold{display:flex;flex-direction:column;gap:2px;align-items:center;text-align:center;padding:8px 4px;border:1px solid transparent;border-radius:8px;background:transparent;cursor:pointer;font:inherit}
+.fs-fold b{font-weight:500;font-size:13px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.fs-fold:hover{background:rgba(31,111,235,.08)}
+.fs-fold span{font-size:46px;line-height:1}.fs-fold.noitem b{color:#a15c00}
 .fs-rows{display:flex;flex-direction:column;gap:4px}
 .fs-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line,#e3e3ea);border-radius:8px;background:var(--card,#fff);cursor:default}
 .fs-row.sel{border-color:var(--brand,#1f6feb);box-shadow:0 0 0 2px rgba(31,111,235,.15)}
@@ -4885,6 +4889,7 @@ function mSearch(q) {
 }
 function mSearchIn(i) {
   const q = ($('mq') || {}).value || '';
+  if (S.cfOpen) { S.cfOpen = false; closeModal(); }
   selectTab(i);
   const go = (n) => { const s = $('search'); if (s && S.data) { s.value = q; onSearch(q); } else if (n < 40) setTimeout(() => go(n + 1), 150); };
   go(0);
@@ -7302,6 +7307,32 @@ document.addEventListener('paste', e => {
   if (S.view !== 'files' || !fsSt().code) return;
   const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
   const fl = e.clipboardData && e.clipboardData.files; if (fl && fl.length) { e.preventDefault(); fsUpFiles(fl); }
+});
+/* 🔍 Ctrl+F हर जगह (मालिक 20-Nov, "जैसे कोरल में"): उस पेज का खोज-डिब्बा; न हो तो पूरी ऐप में खोजो (पेज / Job Register / Order Booking…) */
+function ctrlFind() {
+  S.cfOpen = true;
+  openModal('🔍 खोजें — Ctrl+F', '<div class="msearch"><span>🔍</span><input id="mq" type="search" placeholder="ITAM CODE, JOB NUMBER, पार्टी, पेज… लिखकर Enter" oninput="mSearch(this.value)" onkeydown="if(event.key===\'Enter\')ctrlFindGo()" autocomplete="off"></div><div id="mqRes"></div>');
+  setTimeout(() => { const i = $('mq'); if (i) i.focus(); }, 30);
+  setTimeout(() => { const i = $('mq'); if (i && document.activeElement !== i) i.focus(); }, 250);
+}
+function ctrlFindGo() {
+  const q = String(($('mq') || {}).value || '').trim(); if (!q) return;
+  const T = (S.tabs || []).map(t => String(t).trim().toLowerCase());
+  let i = /^[0-9]+$/.test(q) ? T.indexOf('order booking') : T.indexOf('job register'); if (i < 0) i = 0;
+  mSearchIn(i);
+}
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey || String(e.key).toLowerCase() !== 'f' || !S.user) return;
+  e.preventDefault();
+  const vis = el => el && el.offsetParent !== null;
+  const modalOpen = $('modal') && !$('modal').classList.contains('hidden');
+  if (!modalOpen) {
+    if (S.view === 'files' && vis($('fsQ'))) { $('fsQ').focus(); $('fsQ').select(); return; }
+    const s = $('search'); if (S.view === 'data' && vis(s)) { s.focus(); s.select(); return; }
+    const m = $('main'), any = m && [...m.querySelectorAll('input[type=search], input[placeholder^="🔍"]')].find(vis);
+    if (any) { any.focus(); any.select(); return; }
+  }
+  ctrlFind();
 });
 async function offAllLoad() {
   const code = S.wfItem; if (!code) return;
