@@ -1817,6 +1817,16 @@
 .fs-ifn{display:inline-flex;align-items:center;gap:6px}
 .sw-bar{position:fixed;left:50%;transform:translateX(-50%);top:10px;z-index:9999;display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:min(900px,94vw);background:#fff8e1;border:1px solid #f0c36d;border-radius:10px;padding:10px 14px;box-shadow:0 6px 24px rgba(0,0,0,.15);font-size:14px}
 .sw-bar span{flex:1 1 300px;color:#5b4a1e}
+
+/* 📖 बुक प्रिंटिंग टेबल (मालिक 20-Nov) */
+.bkp{padding:6px 0}.bk-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px}.bk-sub{margin:2px 0 8px}
+.bk-w{overflow:auto;max-height:calc(100vh - 190px);border:1px solid var(--bd,#d9dee8);border-radius:10px}
+.bk-t{border-collapse:collapse;width:100%;font-size:14px}.bk-t th{position:sticky;top:0;background:var(--card,#f3f6fb);text-align:left;padding:8px 10px;white-space:nowrap;border-bottom:2px solid var(--bd,#d9dee8);z-index:1}
+.bk-t td{padding:7px 10px;border-bottom:1px solid var(--bd,#e6eaf2);vertical-align:middle}.bk-t tr:hover td{background:rgba(80,120,255,.06)}
+.bk-t .bk-n{text-align:right;white-space:nowrap}.bk-t .bk-f{white-space:nowrap}.bk-t .bk-f .btn{margin-right:4px}
+.bk-nt{min-width:140px;max-width:260px}.bk-note{display:block;color:#a15c00;background:#fff4dc;border-radius:6px;padding:2px 6px;margin-bottom:3px;font-weight:600}
+.bk-in{display:flex;gap:6px;align-items:center}.bk-in input{width:92px;padding:6px 8px}
+.bk-left{color:#c2410c;font-size:17px}.bk-zero{color:#15803d;font-size:17px}.bk-done td{opacity:.62}
 </style>
 
 </head>
@@ -2191,7 +2201,7 @@ function startSession(r) {
   loadProcs().then(sessSave);
 }
 /* 🖥 डेस्कटॉप: लॉगिन के बाद पहले पूरा डेटा कंप्यूटर में, फिर सॉफ़्टवेयर (मालिक 20-Nov) — पहले से डेटा हो तो सीधे */
-if (window.PC_DESK && window.pcDesk) window.pcDesk.dataDir().then(d => { S.deskDir = d; }).catch(() => {});
+if (window.PC_DESK && window.pcDesk) window.pcDesk.dataDir().then(d => { S.deskDir = d; }).catch(() => {}); if (window.PC_DESK && window.pcDesk && window.pcDesk.filesDirGet) window.pcDesk.filesDirGet().then(x => { S.deskFiles = x; }).catch(() => {});
 async function deskFirstPull(done) {
   let have = null; try { have = await IDB.get(LOC_KEY()); } catch (e) { have = null; }
   if (have && have.jr) { done(); return; }
@@ -2496,17 +2506,19 @@ async function setView(v) {
   if (v === 'files') return renderFs();
   if (S.user && S.user.simple) {
     if (!(v === 'buy' || (v === 'data' && (S.tabs || []).indexOf(S.tab) >= 0))) {   /* Workflow / Billing — सिर्फ नए ऑर्डर (सर्वर छाँटता है) */
-      if (['home', 'sjr', 'sob', 'pw'].indexOf(v) < 0) v = 'home';
+      if (['home', 'sjr', 'sob', 'pw', 'bkp'].indexOf(v) < 0) v = 'home';
       S.view = v === 'pw' ? 'home' : v; drawNav();
       if (v === 'pw') { renderBooking(); return changePwDialog(); }
       if (v === 'home') return renderBooking();
+      if (v === 'bkp') return renderBkp();
       return renderSimple(v);
     }
   }
   /* 🖨 तारा जैसा यूज़र (कोई टैब नहीं, सिर्फ काम) — होम = उसकी छपाई / प्रोडक्शन (मालिक 16-Nov) */
-  if (v === 'home' && S.user && S.user.role !== 'Admin' && !(S.tabs || []).length && !S.user.stock && S.procMeta && S.procMeta.see) { v = 'prod'; S.view = 'prod'; }
+  if (v === 'home' && S.user && S.user.role !== 'Admin' && !(S.tabs || []).length && !S.user.stock && S.procMeta && S.procMeta.see) { v = 'bkp'; S.view = 'bkp'; }
   if (v === 'users') return loadUsers();
   if (v === 'settings') return renderSettings();
+  if (v === 'bkp') return renderBkp();
   if (v === 'prod') return renderProduction();
   if (v === 'buy') return renderBuy();
   if (v === 'rates') return renderRates();
@@ -3074,7 +3086,7 @@ async function renderHome() {
       <div class="hh-sub">Print Care — आज का पूरा काम एक नज़र में</div></div></div>
     ${pcWho() ? '<div class="pc-home">' + pcSetupBtn() + '<span class="muted small">फाइलें सीधे कंप्यूटर में खोलने के लिए — एक बार</span></div>' : ''}
     ${mobHomeTop()}
-    <div class="home3">${(S.user.design ? [] : BUY_PAGES).map(p => `<button class="h3c" onclick="buyOpen('${p[0]}')"><b>${p[1]}</b><small>${p[2]}</small></button>`).join('')}${S.user.stock ? '<button class="h3c" onclick="setView(\'stock\')"><b>📦 स्टॉक नोट</b><small>तारा फैक्ट्री से आए फोटो + नोट</small></button>' : ''}<button class="h3c later" onclick="openLater()"><b>⏳ रेट बाकी</b><small>जिन आइटम में काम टिक है पर रेट बाद में भरना है</small></button></div>
+    <div class="home3">${bkpOk() ? '<button class="h3c" onclick="setView(\'bkp\')"><b>📖 तारा का बुक प्रिंटिंग</b><small>तारा जो देखती है वही, लाइव — कितना निकला, कितना बाकी</small></button>' : ''}${(S.user.design ? [] : BUY_PAGES).map(p => `<button class="h3c" onclick="buyOpen('${p[0]}')"><b>${p[1]}</b><small>${p[2]}</small></button>`).join('')}${S.user.stock ? '<button class="h3c" onclick="setView(\'stock\')"><b>📦 स्टॉक नोट</b><small>तारा फैक्ट्री से आए फोटो + नोट</small></button>' : ''}<button class="h3c later" onclick="openLater()"><b>⏳ रेट बाकी</b><small>जिन आइटम में काम टिक है पर रेट बाद में भरना है</small></button></div>
     <div class="kpis" id="kpis">${S.tabs.map(t => `<div class="kpi skel"><div class="k-ic">${tabIcon(t)}</div><div><div class="k-t">${esc(t)}</div><div class="k-n">…</div></div></div>`).join('')}</div>
     <div class="home-grid"><div class="card"><h3>🕘 हाल की एंट्री</h3><div id="recent" class="loading small">लोड हो रहा है…</div></div>
       <div class="card"><h3>⚡ जल्दी जाएँ</h3><div class="quick">${S.tabs.map((t, i) => `<button class="btn" onclick="selectTab(${i})">${tabIcon(t)} ${esc(t)}</button>`).join('')}
@@ -4721,6 +4733,7 @@ function mobItems() {
   const tabs = (S.tabs || []).map((t, i) => ({ k: 'tab:' + t, ic: tabIcon(t), t: t, go: 'selectTab(' + i + ')', o: TOP.indexOf(String(t).trim().toLowerCase()) }));
   if (flowOk) tabs.push({ k: 'buy', ic: '🧾', t: 'Workflow', go: "buyOpen('')", o: 2 });
   tabs.map((x, i) => Object.assign(x, { i })).sort((a, b) => (a.o < 0 ? 99 : a.o) - (b.o < 0 ? 99 : b.o) || a.i - b.i).forEach(x => { delete x.o; delete x.i; it.push(x); });
+  if (bkpOk()) it.push({ k: 'bkp', ic: '📖', t: 'तारा का बुक प्रिंटिंग', go: "setView('bkp')" });
   if (see) it.push({ k: 'prod', ic: navIc('icon-production', '🏭'), t: 'प्रोडक्शन', go: "setView('prod')" });
   if (S.user && S.user.role === 'Admin') it.push({ k: 'rates', ic: '📒', t: 'रेट मास्टर', go: "setView('rates')" });
   if (S.user && S.user.stock) it.push({ k: 'stock', ic: '💬', t: 'स्टॉक चैट', go: "setView('stock')" });
@@ -5230,7 +5243,7 @@ function locDlg() {
   const L = S.loc, mb = x => (x / 1048576).toFixed(1) + ' MB', t = L && (L.checked || L.pulled);
   openModal(devTxt('💻 इस कंप्यूटर का डेटा'), devTxt(`<div class="loc-d">
     <div class="loc-s"><div><small>आइटम</small><b>${L ? fmtNum(Object.keys(L.by || {}).length) : '—'}</b></div><div><small>पार्टियाँ</small><b>${L ? fmtNum(Object.keys(L.parties || {}).length) : '—'}</b></div><div><small>जगह</small><b>${L && L.bytes ? mb(L.bytes) : '—'}</b></div><div><small>आख़िरी सिंक</small><b>${t ? new Date(t).toLocaleString('en-IN') : '—'}</b></div></div>
-    <div class="loc-box"><b>📍 कहाँ सेव होता है?</b><div class="small">${window.PC_DESK ? '🖥 आपके चुने फ़ोल्डर में: <b>' + esc(S.deskDir || '…') + '</b> — सारा डेटा यहीं, Chrome में नहीं। <button class="btn sm" onclick="window.pcDesk.openFolder()">📂 फ़ोल्डर खोलो</button> <button class="btn sm" onclick="window.pcDesk.changeDir()">📁 जगह बदलो</button>' : `इसी कंप्यूटर के ब्राउज़र (Chrome / Edge) की अंदर की सुरक्षित जगह में — नाम <b>"printcare"</b>। यह अपने-आप बनती है, अलग फ़ोल्डर चुनने की ज़रूरत नहीं; Windows में अलग फाइल नहीं दिखती, कोई दूसरा प्रोग्राम इसे नहीं खोल सकता। चाहें तो नीचे "⬇ बैकअप कॉपी" से एक फाइल Downloads फ़ोल्डर में भी रख सकते हैं।`}</div></div>
+    <div class="loc-box"><b>📍 कहाँ सेव होता है?</b><div class="small">${window.PC_DESK ? '🖥 आपके चुने फ़ोल्डर में: <b>' + esc(S.deskDir || '…') + '</b> — सारा डेटा यहीं, Chrome में नहीं। <button class="btn sm" onclick="window.pcDesk.openFolder()">📂 फ़ोल्डर खोलो</button> <button class="btn sm" onclick="window.pcDesk.changeDir()">📁 जगह बदलो</button><br>🗂 <b>फ़ाइलें (क्लाइंट की PDF / CDR):</b> ' + (S.deskFiles && S.deskFiles.dir ? 'मास्टर ड्राइव <b>' + esc(S.deskFiles.dir) + '</b>' + (S.deskFiles.ok ? '' : ' — ⚠ अभी जुड़ी नहीं (मालिक का कंप्यूटर चालू? Z: जुड़ी?)') : 'इसी कंप्यूटर में') + ' <button class="btn sm" onclick="window.pcDesk.filesDirSet(' + String.fromCharCode(39) + 'master' + String.fromCharCode(39) + ')">🖥 मास्टर (Z:) में रखो</button> <button class="btn sm" onclick="window.pcDesk.filesDirSet(' + String.fromCharCode(39) + String.fromCharCode(39) + ')">💻 इसी कंप्यूटर में</button>' : `इसी कंप्यूटर के ब्राउज़र (Chrome / Edge) की अंदर की सुरक्षित जगह में — नाम <b>"printcare"</b>। यह अपने-आप बनती है, अलग फ़ोल्डर चुनने की ज़रूरत नहीं; Windows में अलग फाइल नहीं दिखती, कोई दूसरा प्रोग्राम इसे नहीं खोल सकता। चाहें तो नीचे "⬇ बैकअप कॉपी" से एक फाइल Downloads फ़ोल्डर में भी रख सकते हैं।`}</div></div>
     <div class="loc-box"><b>📦 क्या-क्या रखा है</b><div class="small">✅ Job Register के सारे आइटम (आपके कॉलम) · ✅ हर आइटम के काम, कैटेगरी, छपाई / साइज़, फाइलों के नाम / लिंक, रेट (जिन्हें अधिकार है) · ✅ पार्टियाँ (नई भी) · ✅ Workflow (खरीद / बाहर / घर का काम) · ✅ प्रोडक्शन (तारा / काम की गिनती) · ✅ सारी शीटें पूरी (Job Register / Order Booking / Billing / बाकी — आपके अधिकार वाली)<br>❌ असली फाइलें (PDF / CDR) — वो खोलते समय Drive से आती हैं</div></div>
     <div class="loc-box"><b>🔄 डाउनलोड</b><div id="locProg"></div></div>
     <div class="muted small">हर 1½ मिनट में पीछे से अपने-आप देखता है कि शीट में कुछ बदला क्या — बदला हो तो <b>सिर्फ वही हिस्सा</b> लाता है, बाकी पहले वाला ही रहता है (बार-बार पूरा डाउनलोड नहीं)।</div>
@@ -6232,7 +6245,7 @@ async function bkNewSave() {
 function simpleItems() {
   /* मालिक 15-Nov: होम = 📝 बुकिंग; बाएँ से Job Register / Order Booking / Workflow / Billing की शीट (सिर्फ नई रो) */
   const tab = t => (S.tabs || []).indexOf(t) >= 0 ? [{ k: 'tab:' + t, ic: tabIcon(t), t: t, go: 'selectTab(' + S.tabs.indexOf(t) + ')' }] : [];
-  return [{ k: 'home', ic: navIc('icon-home', '🏠'), t: 'होम — नया ऑर्डर', go: "setView('home')" }].concat(tab('Job Register'), tab('Order Booking'), [{ k: 'buy', ic: '🧾', t: 'Workflow', go: "buyOpen('')" }], tab('Billing'), [{ k: 'pw', ic: '🔑', t: 'पासवर्ड', go: "setView('pw')" }]);
+  return [{ k: 'home', ic: navIc('icon-home', '🏠'), t: 'होम — नया ऑर्डर', go: "setView('home')" }].concat(tab('Job Register'), tab('Order Booking'), [{ k: 'buy', ic: '🧾', t: 'Workflow', go: "buyOpen('')" }], tab('Billing'), bkpOk() ? [{ k: 'bkp', ic: '📖', t: 'तारा का बुक प्रिंटिंग', go: "setView('bkp')" }] : [], [{ k: 'pw', ic: '🔑', t: 'पासवर्ड', go: "setView('pw')" }]);
 }
 /* 🕘 हाज़िरी (मालिक 19-Nov): नितिन / भावना के लिए बिना दूसरे लॉगिन; बाकी स्टाफ के लिए लॉगिन पेज से स्टाफ पन्ना */
 const ATT_STAFF_URL = 'https:' + String.fromCharCode(47, 47) + 'script.google.com' + String.fromCharCode(47) + 'macros' + String.fromCharCode(47) + 's' + String.fromCharCode(47) + 'AKfycbwBTQW5lubr-XJn8DVWjY11eRvLLJszASeDPmX26B_LH1M6oFlnczYaZNw7AlgGg-AFaQ' + String.fromCharCode(47) + 'exec?view=staff';
@@ -6300,6 +6313,7 @@ function renderSimpleHome() {
   m.innerHTML = `<div class="sp-home"><div class="sp-hi">नमस्ते, ${esc(S.user.name)} 👋</div>
     <button class="sp-big" onclick="setView('sjr')"><span>📒</span><b>Job Register</b><small>पार्टी चुनें → आइटम खोलें / नया आइटम बनाएँ</small></button>
     <button class="sp-big" onclick="setView('sob')"><span>📝</span><b>Order Booking</b><small>पार्टी चुनें → आइटम चुनें → ऑर्डर बुक करें</small></button>
+    ${bkpOk() ? '<button class="sp-big" onclick="setView(\'bkp\')"><span>📖</span><b>तारा का बुक प्रिंटिंग</b><small>तारा जो देखती है वही — कितना निकला, कितना बाकी</small></button>' : ''}
     ${instBtnHtml('sp-big')}</div>`;
 }
 async function renderSimple(kind) {
@@ -8628,6 +8642,66 @@ async function comboSave() {
   try { const id = await api('apiComboSave', S.token, data); toast('🔗 कॉम्बो ' + id + ' सेव — हर जॉब में हिस्सा भरा'); delete S.wfDet.COMBO; closeModal(true); renderProduction(); }
   catch (e) { fail(e); busy('cbSave', false); }
 }
+/* ---------- 📖 बुक प्रिंटिंग — तारा का टेबल (मालिक 20-Nov): तारा / नितिन / भावना सबको एक ही स्क्रीन, एक ही डाटा ---------- */
+function bkpOk() { const u = S.user; if (!u || S.asUser) return false; if (u.role === 'Admin' || String(u.username || '').toLowerCase() === 'bhavna') return true; return !!(S.procMeta && S.procMeta.see && !(S.tabs || []).length && !u.stock && !u.design); }
+async function renderBkp() {
+  const m = $('main'); if ($('pageTitle')) $('pageTitle').innerHTML = '📖 बुक प्रिंटिंग';
+  S.bkp = S.bkp || { q: '', sh: 'all' };
+  if (S.bkpD) drawBkp(); else m.innerHTML = '<div class="loading">बुक प्रिंटिंग आ रही है…</div>';
+  try { const D = await api('apiBkpData', S.token); S.bkpD = D; if (S.view === 'bkp') drawBkp(); }
+  catch (e) { if (!S.bkpD) m.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; else toast('⚠ ' + e.message, true); }
+}
+function bkpFileBtn(f, lbl, r, slot) {
+  if (!f) return '';
+  return window.pcDesk && window.pcDesk.fileOpen
+    ? '<button class="btn sm primary" onclick="taraOpen(\'' + esc(f.id) + '\',this)" title="' + esc(f.name) + '">📂 ' + lbl + '</button>'
+    : '<button class="btn sm primary" onclick="taraPdf(\'' + esc(r.code).replace(/'/g, '') + '\',this,\'' + esc(r.job) + '\',\'' + slot + '\')" title="' + esc(f.name) + '">👁 ' + lbl + '</button>';
+}
+function drawBkp() {
+  const m = $('main'), D = S.bkpD; if (!m || !D) return;
+  const U = S.bkp, act = !!D.act, q = String(U.q || '').toLowerCase();
+  const rows = D.rows.filter(r => (U.sh === 'all' || (U.sh === 'open' ? r.left > 0 : r.left <= 0)) && (!q || (r.job + ' ' + r.code + ' ' + r.name + ' ' + r.party).toLowerCase().indexOf(q) >= 0));
+  const nOpen = D.rows.filter(r => r.left > 0).length, todayN = D.rows.reduce((s, r) => s + (r.today || 0), 0);
+  const seg = (k, t, n) => '<button class="btn ' + (U.sh === k ? 'on' : '') + '" onclick="S.bkp.sh=\'' + k + '\';drawBkp()">' + t + ' <b>' + n + '</b></button>';
+  const tr = r => {
+    const note = (r.note ? '<span class="bk-note">📝 ' + esc(r.note) + '</span>' : '') + (D.canNote ? '<button class="btn sm" onclick="bkpNote(\'' + esc(r.job) + '\')" title="तारा के लिए नोट">' + (r.note ? '✏' : '➕ नोट') + '</button>' : '');
+    const last = r.left <= 0
+      ? '<span class="pst done">✅ पूरा</span>'
+      : act ? '<div class="bk-in"><input id="bo_' + r.row + '" inputmode="numeric" placeholder="आज निकालीं" onkeydown="if(event.key===\'Enter\')bkpDone(' + r.row + ')"><button class="btn primary sm" onclick="bkpDone(' + r.row + ')">✅ Done</button></div>' : '<span class="muted small">👁 सिर्फ देखें</span>';
+    return '<tr class="' + (r.left <= 0 ? 'bk-done' : '') + '"><td>' + esc(showDate(r.date)) + '</td><td><b>#' + esc(r.job) + '</b></td><td>' + esc(r.party) + '</td><td>' + esc(r.code) + '</td><td>' + esc(r.name) + '</td><td class="bk-n">' + fmtNum(r.qty) + '</td><td class="bk-nt">' + note + '</td>'
+      + '<td class="bk-f">' + bkpFileBtn(r.bw, 'B/W फ़ाइल', r, 'inner') + bkpFileBtn(r.color, 'कलर', r, 'color') + (!r.bw && !r.color ? '<span class="muted small">⚠ फ़ाइल नहीं लगी</span>' : '') + '</td><td>' + last + '</td>'
+      + '<td class="bk-n"><b class="' + (r.left > 0 ? 'bk-left' : 'bk-zero') + '">' + fmtNum(r.left) + '</b><div class="muted small">निकलीं ' + fmtNum(r.out) + '</div></td></tr>';
+  };
+  m.innerHTML = '<div class="bkp"><div class="bk-h"><div class="seg">' + seg('all', 'सब', D.rows.length) + seg('open', '⏳ बाकी', nOpen) + seg('done', '✅ पूरे', D.rows.length - nOpen) + '</div>'
+    + '<div class="tp-today">आज निकालीं: <b>' + fmtNum(todayN) + '</b></div><span class="iw2-sp"></span>'
+    + '<input type="search" class="tp-q" placeholder="🔍 JOB / कोड / नाम / पार्टी" value="' + esc(U.q || '') + '" oninput="S.bkp.q=this.value;clearTimeout(S.bkT);S.bkT=setTimeout(drawBkp,250)">'
+    + '<button class="btn sm" onclick="renderBkp()" title="ताज़ा करें">🔄</button></div>'
+    + '<div class="muted small bk-sub">पिछले 30 दिन के ऑर्डर (' + esc(showDate(D.cut)) + ' से आज तक) · सबसे नया ऊपर' + (act ? '' : ' · 👁 तारा की स्क्रीन, हू-ब-हू') + '</div>'
+    + (rows.length ? '<div class="bk-w"><table class="bk-t"><thead><tr><th>तारीख</th><th>ऑर्डर नं.</th><th>क्लाइंट</th><th>आइटम कोड</th><th>आइटम का नाम</th><th>क्वांटिटी</th><th>नोट</th><th>प्रिंट फ़ाइल</th><th>' + (act ? 'आज निकालीं / Done' : 'काम') + '</th><th>बैलेंस</th></tr></thead><tbody>' + rows.map(tr).join('') + '</tbody></table></div>' : emptyArt('all-done', 'कोई ऑर्डर नहीं मिला')) + '</div>';
+}
+async function bkpDone(row) {
+  const r = (S.bkpD.rows || []).find(x => x.row === row); if (!r) return;
+  const v = n0((($('bo_' + row)) || {}).value);
+  if (!(v > 0) && !(await askYes('✅ #' + r.job + ' — बाकी सारी ' + fmtNum(r.left) + ' निकल गईं? पूरा करें?', 'हाँ, पूरा'))) return;
+  const q = v > 0 ? v : r.left;
+  if (q > r.left && r.left > 0 && !(await askYes('⚠ ' + fmtNum(q) + ' लिखी हैं, पर बाकी सिर्फ ' + fmtNum(r.left) + ' हैं।\nफिर भी जोड़ें?', 'हाँ, जोड़ो'))) return;
+  try {
+    const res = await api('apiDailyOut', S.token, row, q, false);
+    r.out = res.out; r.left = res.left; r.status = res.status; r.today = (r.today || 0) + q;
+    toast(res.left <= 0 ? '🎉 #' + r.job + ' पूरा' : '✅ ' + fmtNum(q) + ' जोड़ीं — बाकी ' + fmtNum(res.left)); drawBkp();
+  } catch (e) { fail(e); }
+}
+function bkpNote(job) {
+  const r = (S.bkpD.rows || []).find(x => x.job === job); if (!r) return;
+  const el = document.createElement('div'); el.className = 'effdlg';
+  el.innerHTML = '<div class="effbox"><h3>📝 तारा के लिए नोट — #' + esc(job) + ' · ' + esc(r.code) + '</h3><textarea id="bnT" rows="3" style="width:100%" placeholder="जैसे: पहले 2 पेज कलर हैं · कवर अलग छपेगा">' + esc(r.note || '') + '</textarea><div class="actions"><button class="btn" data-a="x">रद्द</button>' + (r.note ? '<button class="btn danger" data-a="del">🗑 नोट हटाओ</button>' : '') + '<button class="btn primary" data-a="ok">✔ सेव</button></div></div>';
+  document.body.appendChild(el); setTimeout(() => { const x = $('bnT'); if (x) x.focus(); }, 30);
+  el.addEventListener('click', async e => {
+    const k = e.target.dataset && e.target.dataset.a; if (!k) return;
+    const v = k === 'del' ? '' : String(($('bnT') || {}).value || '').trim(); el.remove(); if (k === 'x') return;
+    try { const x = await api('apiBkpNote', S.token, job, v); r.note = x.note; toast(x.note ? '📝 नोट सेव — तारा को दिखेगा' : '🗑 नोट हटा'); drawBkp(); } catch (er) { fail(er); }
+  });
+}
 function prodWho(r, p) { return p.type === 'out' ? (r.vendor || 'वेंडर तय नहीं') : (p.hi || p.name); }
 /* ---------- 🖨 तारा पैनल (मालिक 17-Nov): ⏳ बाकी काम · ✅ पूरे हुए · आज कितनी निकालीं ---------- */
 function taraPanelOn() { const P = S.prod || {}, U = S.prodUi || {}; if (U.tara !== undefined) return !!U.tara; return !(S.user && S.user.role === 'Admin') && (P.mine || []).length > 0 && P.mine.every(c => c === 'TARA'); }
@@ -8679,7 +8753,7 @@ async function taraOut(row, all, undo) {
     r.out = res.out; r.outLog = res.log; r.status = res.status; if (res.status === 'हुआ') r.at = new Date().toISOString().slice(0, 16).replace('T', ' ');
     toast(undo ? '↩ आख़िरी गिनती हटी — बाकी ' + fmtNum(res.left) : res.status === 'हुआ' ? '🎉 #' + r.job + ' पूरा — ✅ पूरे हुए में गया' : '✅ ' + fmtNum(q) + ' जोड़ीं — बाकी ' + fmtNum(res.left));
     try { localStorage.setItem('pc_prod_' + WSP() + S.user.username, JSON.stringify(S.prod)); } catch (x) {}
-    drawTara();
+    if (S.view === 'bkp') drawBkp(); else drawTara();
   } catch (e) { fail(e); }
 }
 function drawProduction() {
