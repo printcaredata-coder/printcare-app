@@ -2299,7 +2299,7 @@ function tabIcon(t) { const k = String(t).toLowerCase(), n = TAB_ART[k]; return 
 function navSave() {
   if (!S.user) return;
   const q = sel => { const e = document.querySelector(sel); return e ? [e.scrollTop, e.scrollLeft] : null; };
-  const nav = { as: S.asUser || '', fs: S.view === 'files' ? { party: (S.fs || {}).party || '', code: (S.fs || {}).code || '', mode: (S.fs || {}).mode || 'used', zf: S.zf ? { mode: S.zf.mode, path: S.zf.path, q: S.zf.q } : null } : null, bkp: S.view === 'bkp' && S.bkp ? { q: S.bkp.q || '', sh: S.bkp.sh || 'all', cf: S.bkp.cf || {} } : null, view: S.view, tab: S.tab, page: S.q.page, search: S.q.search || '', r: S.navRow || null, kind: S.navKind || '',
+  const nav = { as: S.asUser || '', fs: S.view === 'files' ? { party: (S.fs || {}).party || '', code: (S.fs || {}).code || '', mode: (S.fs || {}).mode || 'used', zf: S.zf ? { mode: S.zf.mode, path: S.zf.path, q: S.zf.q, by: S.zf.by, ip: S.zf.ip } : null } : null, bkp: S.view === 'bkp' && S.bkp ? { q: S.bkp.q || '', sh: S.bkp.sh || 'all', cf: S.bkp.cf || {} } : null, view: S.view, tab: S.tab, page: S.q.page, search: S.q.search || '', r: S.navRow || null, kind: S.navKind || '',
     md: S.navModal || '', bu: S.view === 'buy' && S.buyUi ? S.buyUi : null,
     iw: S.bk && S.bk.code && document.querySelector('#bkBody .iw2') ? { code: S.bk.code, party: S.bk.party || '', mode: S.bk.mode || '', modal: !!S.bk.modal } : null,
     co: S.calcOpen && S.navRow ? Object.keys(S.calcOpen).filter(k => S.calcOpen[k]) : [], qty: S.calcQty || '',
@@ -2355,7 +2355,7 @@ function navRestore() {
   try { nav = JSON.parse(sessionStorage.getItem('pc_nav') || 'null'); } catch (e) {}
   if (!nav || Date.now() - (nav.at || 0) > 12 * 3600e3) return setView('home');
   if (nav.as && S.asUser !== nav.as && !S.asUser && S.user && S.user.role === 'Admin') { panelAs(nav.as); return; }   /* किसी का पैनल देख रहे थे → वही पैनल, फिर वही जगह */
-  if (nav.view === 'files' && nav.fs) { if (nav.fs.zf) S.zf = Object.assign({ mode: 'used', path: [], q: '', sel: -1 }, nav.fs.zf); S.fs = fsSt(); Object.assign(S.fs, { party: nav.fs.party || '', code: nav.fs.code || '', mode: nav.fs.mode || 'used' }); setView('files'); navWait(() => $('main') && ($('fsPage') || $('zfsPage')), () => setTimeout(() => navScroll(nav.sc, ['doc', 'main']), 400), 15000); return; }
+  if (nav.view === 'files' && nav.fs) { if (nav.fs.zf) S.zf = Object.assign({ mode: 'used', path: [], q: '', sel: -1, by: 'fold', ip: [] }, nav.fs.zf); S.fs = fsSt(); Object.assign(S.fs, { party: nav.fs.party || '', code: nav.fs.code || '', mode: nav.fs.mode || 'used' }); setView('files'); navWait(() => $('main') && ($('fsPage') || $('zfsPage')), () => setTimeout(() => navScroll(nav.sc, ['doc', 'main']), 400), 15000); return; }
   if (nav.view === 'bkp') { S.bkp = Object.assign({ q: '', sh: 'all' }, nav.bkp || {}); setView('bkp'); navWait(() => $('main') && document.querySelector('.bk-w'), () => navScroll(nav.sc, ['doc', 'main', 'bk']), 20000); return; }
   if (['sjr', 'sob', 'stock', 'pw'].indexOf(nav.view) >= 0) { setView(nav.view); navReIw(nav); return; }
   if (nav.qty) S.calcQty = nav.qty;
@@ -7294,7 +7294,7 @@ async function fsLoad(force) {
 }
 /* 🗂 Z: से सारे क्लाइंट (मालिक 20-Nov, सॉफ़्टवेयर 1.0.7): Z:\\ALL CLIENT\\USED (1-Jan-2025 के बाद) / UNUSED (पहले की) — फ़ाइलें सीधे Z: से खुलती हैं, कोई डाउनलोड नहीं, Drive / urlfetch नहीं */
 function zfsOn() { return !!(window.PC_DESK && window.pcDesk && window.pcDesk.zScan); }
-function zfsSt() { return S.zf || (S.zf = { mode: 'used', path: [], q: '', sel: -1 }); }
+function zfsSt() { return S.zf || (S.zf = { mode: 'used', path: [], q: '', sel: -1, by: 'fold', ip: [] }); }
 async function renderZfs() {
   const m = $('main'); S.view = 'files'; if ($('pageTitle')) $('pageTitle').innerHTML = '📁 सारे क्लाइंट';
   const Z = zfsSt();
@@ -7303,17 +7303,41 @@ async function renderZfs() {
     const info = await window.pcDesk.zInfo();
     if (!info.ok) { m.innerHTML = '<div class="empty">⚠ Z: नहीं मिली — ' + esc(info.root) + '<br>मालिक का कंप्यूटर चालू है और Z: जुड़ी है? <button class="btn sm" onclick="S.zIdx=null;renderZfs()">🔄 फिर देखो</button></div>'; return; }
     if (!S.zIdx) S.zIdx = await window.pcDesk.zScan(false);
+    await zfsLoadMap(false);
   } catch (e) { m.innerHTML = '<div class="empty">' + esc(e.message || e) + '</div>'; return; }
   zfsDraw();
 }
-async function zfsRescan() { const m = $('main'); S.zIdx = null; zfsSt().sel = -1; if (m) m.innerHTML = '<div class="loading">Z: दोबारा पढ़ रहे हैं…</div>'; try { S.zIdx = await window.pcDesk.zScan(true); } catch (e) { fail(e); } zfsDraw(); }
+async function zfsLoadMap(force) {
+  if (S.zMap && !force) { if (!S.zItems) zfsBuild(); return; }
+  let M = force ? null : await IDB.get('zmap');
+  if (!M || !M.r || Date.now() - (M.at || 0) > 86400000) { try { M = await api('apiZMap', S.token); IDB.put('zmap', M); } catch (e) { if (!M) { S.zMapErr = e.message || String(e); return; } } }
+  S.zMap = M; S.zMapErr = ''; zfsBuild();
+}
+/* Z: की हर फ़ाइल → आइटम: नाम + साइज़ से (पुरानी Book on Demand सूची), एक से ज़्यादा मिलें तो रास्ते से */
+function zfsBuild() {
+  const I = S.zIdx, M = S.zMap; if (!I || !M) return; const ix = {};
+  M.r.forEach(r => { const k = String(r[0]).toLowerCase() + '|' + r[1]; (ix[k] = ix[k] || []).push(r); });
+  const items = {}; let hit = 0, tot = 0;
+  [['used', 'USED/'], ['unused', 'UNUSED/']].forEach(([mode, pre]) => (I[mode] || []).forEach(e => {
+    tot++; const rel = e[0], nm = rel.slice(rel.lastIndexOf('/') + 1), c = ix[nm.toLowerCase() + '|' + e[1]]; if (!c) return;
+    let pick = c[0];
+    if (c.length > 1) { const low = rel.toLowerCase(), b = c.filter(x => !x[4] || low.indexOf(String(x[4]).toLowerCase()) >= 0), L = b.length ? b : c; if (new Set(L.map(x => x[2])).size !== 1) return; pick = L[0]; }
+    const party = M.p[pick[3]], code = pick[2]; ((items[party] = items[party] || {})[code] = items[party][code] || []).push([rel, e[1], e[2], pre]); hit++;
+  }));
+  S.zItems = items; S.zHit = hit; S.zTot = tot;
+}
+async function zfsRescan() { const m = $('main'); S.zIdx = null; S.zItems = null; zfsSt().sel = -1; if (m) m.innerHTML = '<div class="loading">Z: दोबारा पढ़ रहे हैं…</div>'; try { S.zIdx = await window.pcDesk.zScan(true); } catch (e) { fail(e); } zfsDraw(); }
 function zfsFmt(n) { return n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : (n / 1048576).toFixed(1) + ' MB'; }
 function zfsGo(i) { const Z = zfsSt(); Z.path = i < 0 ? [] : Z.path.slice(0, i + 1); Z.sel = -1; Z.q = ''; zfsDraw(); }
 function zfsIn(name) { const Z = zfsSt(); Z.path.push(name); Z.sel = -1; Z.q = ''; zfsDraw(); }
 function zfsMode(k) { const Z = zfsSt(); Z.mode = k; Z.path = []; Z.sel = -1; zfsDraw(); }
-function zfsRel(r) { const Z = zfsSt(); return (Z.mode === 'unused' ? 'UNUSED/' : 'USED/') + r; }
+function zfsRel(r, pre) { const Z = zfsSt(); return (pre || (Z.mode === 'unused' ? 'UNUSED/' : 'USED/')) + r; }
+function zfsBy(k) { const Z = zfsSt(); Z.by = k; Z.sel = -1; Z.q = ''; zfsDraw(); }
+function zfsIp(i) { const Z = zfsSt(); Z.ip = i < 0 ? [] : Z.ip.slice(0, i + 1); Z.q = ''; zfsDraw(); }
+function zfsIpIn(el) { const Z = zfsSt(); Z.ip.push(el.dataset.n); Z.q = ''; zfsDraw(); }
 function zfsDraw() {
   const m = $('main'), I = S.zIdx, Z = zfsSt(); if (!m || !I) return;
+  if (Z.by === 'item' && S.zItems) return zfsDrawItems();
   const all = Z.mode === 'unused' ? I.unused : I.used, pre = Z.path.length ? Z.path.join('/') + '/' : '', q = String(Z.q || '').trim().toLowerCase();
   const dirs = {}, files = [];
   if (q) { all.forEach(e => { if (files.length < 400 && e[0].toLowerCase().indexOf(q) >= 0) files.push(e); }); }
@@ -7322,7 +7346,8 @@ function zfsDraw() {
   files.sort((a, b) => b[2] - a[2]);
   Z.cur = files;
   const cr = ['<button class="link" onclick="zfsGo(-1)">📁 सारे क्लाइंट</button>'].concat(Z.path.map((p, i) => i === Z.path.length - 1 ? '<b>' + esc(p) + '</b>' : '<button class="link" onclick="zfsGo(' + i + ')">' + esc(p) + '</button>'));
-  const tg = '<span class="fs-tg"><button class="' + (Z.mode === 'used' ? 'on' : '') + '" onclick="zfsMode(\'used\')">✅ Used (' + fmtNum(I.used.length) + ')</button><button class="' + (Z.mode === 'unused' ? 'on' : '') + '" onclick="zfsMode(\'unused\')">🗃 Unused (' + fmtNum(I.unused.length) + ')</button></span>';
+  const by = '<span class="fs-tg"><button class="on">📁 फ़ोल्डर</button><button onclick="zfsBy(\'item\')" title="पार्टी → आइटम (ITAM CODE) → फ़ाइलें">🧩 आइटम से' + (S.zHit ? ' (' + fmtNum(S.zHit) + ')' : '') + '</button></span> ';
+  const tg = by + '<span class="fs-tg"><button class="' + (Z.mode === 'used' ? 'on' : '') + '" onclick="zfsMode(\'used\')">✅ Used (' + fmtNum(I.used.length) + ')</button><button class="' + (Z.mode === 'unused' ? 'on' : '') + '" onclick="zfsMode(\'unused\')">🗃 Unused (' + fmtNum(I.unused.length) + ')</button></span>';
   const ico = n => '<span class="zf-i">' + (/\.pdf$/i.test(n) ? '📕' : /\.(cdr|ai|psd|eps)$/i.test(n) ? '🎨' : /\.(jpe?g|png|gif|tif+|bmp|webp)$/i.test(n) ? '🖼' : /\.(xlsx?|csv)$/i.test(n) ? '📊' : /\.(docx?)$/i.test(n) ? '📝' : /\.(zip|rar|7z)$/i.test(n) ? '🗜' : '📄') + '</span>';
   m.innerHTML = '<div class="fs-page" id="zfsPage"><div class="fs-bar"><span class="fs-cr">' + cr.join(' <span class="muted">›</span> ') + '</span>' + tg + '<span class="iw2-sp"></span>'
     + '<input id="zfsQ" class="fs-q" placeholder="🔍 नाम / क्लाइंट / आइटम नंबर से खोजें" value="' + esc(Z.q || '') + '" oninput="zfsSt().q=this.value;clearTimeout(S.zfT);S.zfT=setTimeout(zfsDraw,250)">'
@@ -7335,8 +7360,32 @@ function zfsDraw() {
     + '</div>';
   const qi = $('zfsQ'); if (qi && S.zfFocus) { qi.focus(); try { qi.setSelectionRange(qi.value.length, qi.value.length); } catch (e) {} }
 }
-async function zfsOpen(i) { const e = (zfsSt().cur || [])[i]; if (!e) return; try { await window.pcDesk.zOpen(zfsRel(e[0])); } catch (er) { fail(er); } }
-async function zfsShow(i) { const e = (zfsSt().cur || [])[i]; if (!e) return; try { await window.pcDesk.zShow(zfsRel(e[0])); } catch (er) { fail(er); } }
+/* 🧩 आइटम से: पार्टी → आइटम → उस आइटम की फ़ाइलें (Used + Unused दोनों, निशान के साथ) */
+function zfsDrawItems() {
+  const m = $('main'), Z = zfsSt(), T = S.zItems, ip = Z.ip || [], q = String(Z.q || '').trim().toLowerCase(), I = S.zIdx;
+  const num = s => { const x = String(s).match(/-\s*(\d+)\s*$/); return x ? +x[1] : 1e9; };
+  const cr = ['<button class="link" onclick="zfsIp(-1)">🧩 सारे क्लाइंट</button>'].concat(ip.map((p, i) => i === ip.length - 1 ? '<b>' + esc(p) + '</b>' : '<button class="link" onclick="zfsIp(' + i + ')">' + esc(p) + '</button>'));
+  const by = '<span class="fs-tg"><button onclick="zfsBy(\'fold\')">📁 फ़ोल्डर</button><button class="on">🧩 आइटम से (' + fmtNum(S.zHit || 0) + ' / ' + fmtNum(S.zTot || 0) + ')</button></span>';
+  let body = ''; Z.cur = [];
+  if (ip.length === 0) {
+    const ps = Object.keys(T).filter(p => !q || p.toLowerCase().indexOf(q) >= 0).sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
+    body = ps.length ? '<div class="fs-grid">' + ps.map(p => '<button class="fs-fold" onclick="zfsIpIn(this)" data-n="' + esc(p) + '"><span>📁</span><b>' + esc(p) + '</b><small class="muted">' + fmtNum(Object.keys(T[p]).length) + ' आइटम</small></button>').join('') + '</div>' : emptyArt('empty-files', 'कुछ नहीं मिला');
+  } else if (ip.length === 1) {
+    const its = T[ip[0]] || {}, cs = Object.keys(its).filter(k => !q || k.toLowerCase().indexOf(q) >= 0).sort((a, b) => num(a) - num(b) || (a < b ? -1 : 1));
+    body = cs.length ? '<div class="fs-grid">' + cs.map(k => '<button class="fs-fold" onclick="zfsIpIn(this)" data-n="' + esc(k) + '" title="' + esc(k) + '"><span>🧩</span><b>' + esc(k) + '</b><small class="muted">' + fmtNum(its[k].length) + ' फ़ाइल</small></button>').join('') + '</div>' : emptyArt('empty-files', 'कुछ नहीं मिला');
+  } else {
+    const fl = ((T[ip[0]] || {})[ip[1]] || []).filter(e => !q || e[0].toLowerCase().indexOf(q) >= 0).sort((a, b) => b[2] - a[2]); Z.cur = fl;
+    const ico = n => '<span class="zf-i">' + (/\.pdf$/i.test(n) ? '📕' : /\.(cdr|ai|psd|eps)$/i.test(n) ? '🎨' : /\.(jpe?g|png|gif|tif+|bmp|webp)$/i.test(n) ? '🖼' : /\.(xlsx?|csv)$/i.test(n) ? '📊' : '📄') + '</span>';
+    body = fl.length ? '<div class="fs-rows">' + fl.map((e, i) => { const nm = e[0].slice(e[0].lastIndexOf('/') + 1), used = e[3] === 'USED/';
+      return '<div class="fs-row zf-row" ondblclick="zfsOpen(' + i + ')">' + ico(nm) + '<span class="fs-nm" title="' + esc(e[0]) + '">' + esc(nm) + '<small class="muted"> — ' + esc(e[0].slice(0, Math.max(0, e[0].length - nm.length - 1))) + '</small></span><span class="pst ' + (used ? 'done' : '') + '">' + (used ? '✅ Used' : '🗃 Unused') + '</span><span class="muted small">' + zfsFmt(e[1]) + ' · ' + esc(new Date(e[2] * 1000).toISOString().slice(0, 10)) + '</span>'
+        + '<button class="btn sm primary" onclick="zfsView(' + i + ')">👁</button><button class="btn sm" onclick="zfsOpen(' + i + ')">📂 खोलो</button><button class="btn sm" onclick="zfsShow(' + i + ')">📍</button></div>'; }).join('') + '</div>' : emptyArt('empty-files', 'कुछ नहीं मिला');
+  }
+  m.innerHTML = '<div class="fs-page" id="zfsPage"><div class="fs-bar"><span class="fs-cr">' + cr.join(' <span class="muted">›</span> ') + '</span>' + by + '<span class="iw2-sp"></span>'
+    + '<input id="zfsQ" class="fs-q" placeholder="🔍 खोजें" value="' + esc(Z.q || '') + '" oninput="zfsSt().q=this.value;clearTimeout(S.zfT);S.zfT=setTimeout(zfsDraw,250)"><button class="btn sm" onclick="zfsRescan()" title="Z: दोबारा पढ़ो">🔄</button></div>'
+    + '<div class="muted small" style="margin:2px 0 8px">Z: से सीधे · आइटम से जुड़ी ' + fmtNum(S.zHit || 0) + ' फ़ाइलें (कुल ' + fmtNum(S.zTot || 0) + ') — बाकी 📁 फ़ोल्डर में</div>' + body + '</div>';
+}
+async function zfsOpen(i) { const e = (zfsSt().cur || [])[i]; if (!e) return; try { await window.pcDesk.zOpen(zfsRel(e[0], e[3])); } catch (er) { fail(er); } }
+async function zfsShow(i) { const e = (zfsSt().cur || [])[i]; if (!e) return; try { await window.pcDesk.zShow(zfsRel(e[0], e[3])); } catch (er) { fail(er); } }
 /* 👁 बड़ी खिड़की में (PDF / फोटो) — ⬇ सेव और 🖨 प्रिंट के साथ */
 async function zfsView(i) {
   const e = (zfsSt().cur || [])[i]; if (!e) return; const nm = e[0].slice(e[0].lastIndexOf('/') + 1);
@@ -7346,7 +7395,7 @@ async function zfsView(i) {
   o.addEventListener('click', ev => { if (ev.target === o) bkpViewClose(); });
   document.body.appendChild(o); document.addEventListener('keydown', bkpViewKey);
   try {
-    const t0 = Date.now(), b = await window.pcDesk.zRead(zfsRel(e[0])); if (!$('bkpOv')) return;
+    const t0 = Date.now(), b = await window.pcDesk.zRead(zfsRel(e[0], e[3])); if (!$('bkpOv')) return;
     const ext = (nm.match(/\.([a-z0-9]+)$/i) || [0, ''])[1].toLowerCase(), mime = ext === 'pdf' ? 'application/pdf' : /^(jpe?g)$/.test(ext) ? 'image/jpeg' : ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'application/octet-stream';
     const u8 = new Uint8Array(b), f = { name: nm, mime, bytes: u8 }; f.blob = new Blob([u8], { type: mime }); f.url = URL.createObjectURL(f.blob); S.lastFile = f;
     if ($('fvName')) $('fvName').textContent = zfsFmt(u8.length) + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + ' सेकंड';
