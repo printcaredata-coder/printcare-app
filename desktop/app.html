@@ -2384,6 +2384,7 @@ function drawNav() {
   const item = (on, icon, label, click) => `<button class="side-item ${on ? 'on' : ''}" onclick="${click}" title="${esc(label)}"><span class="si-ic">${icon}</span><span class="si-tx">${esc(label)}</span></button>`;
   n.innerHTML = `<div class="side-logo">${logo(36)}<span class="si-tx">${WS === 'cj' ? '🧸 <b>ClapJoy</b>' : 'Print <b>Care</b>'}</span></div>` +
     mobItems().filter(x => x.k !== 'settings').map(x => item(x.k.indexOf('tab:') === 0 ? S.view === 'data' && S.tab === x.k.slice(4) : S.view === x.k, String(x.ic).indexOf('<') === 0 || String(x.ic).length > 4 ? x.ic : '<span class="nav-emo">' + x.ic + '</span>', x.k === 'stock' ? 'स्टॉक नोट' : x.t, x.go)).join('') +
+    (S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna') ? item(false, '<span class="nav-emo">🕘</span>', 'हाज़िरी', 'attOpen()') : '') +
     '<div class="side-gap"></div>' + (S.user && S.user.simple ? '' :
     item(S.view === 'settings' || S.view === 'users', navIc('icon-settings', '⚙️'), 'ऐप सेटिंग', "setView('settings')"));
   const titles = { home: '🏠 होम', settings: '⚙️ ऐप सेटिंग', users: '👥 यूज़र और परमिशन', prod: '🏭 प्रोडक्शन — आज क्या बाकी', buy: '🧾 Workflow — खरीद / बाहर / घर', rates: '📒 रेट मास्टर — हर काम का रेट एक जगह', stock: '📦 स्टॉक नोट — तारा फैक्ट्री' };
