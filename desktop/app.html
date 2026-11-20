@@ -7314,15 +7314,18 @@ async function zfsLoadMap(force) {
   S.zMap = M; S.zMapErr = ''; zfsBuild();
 }
 /* Z: की हर फ़ाइल → आइटम: नाम + साइज़ से (पुरानी Book on Demand सूची), एक से ज़्यादा मिलें तो रास्ते से */
+const ZF_NOITEM = '📂 बिना आइटम';
 function zfsBuild() {
   const I = S.zIdx, M = S.zMap; if (!I || !M) return; const ix = {};
   M.r.forEach(r => { const k = String(r[0]).toLowerCase() + '|' + r[1]; (ix[k] = ix[k] || []).push(r); });
   const items = {}; let hit = 0, tot = 0;
   [['used', 'USED/'], ['unused', 'UNUSED/']].forEach(([mode, pre]) => (I[mode] || []).forEach(e => {
-    tot++; const rel = e[0], nm = rel.slice(rel.lastIndexOf('/') + 1), c = ix[nm.toLowerCase() + '|' + e[1]]; if (!c) return;
+    tot++; const rel = e[0], nm = rel.slice(rel.lastIndexOf('/') + 1), c = ix[nm.toLowerCase() + '|' + e[1]], rec = [rel, e[1], e[2], pre];
+    const none = () => { const cl = rel.indexOf('/') > 0 ? rel.slice(0, rel.indexOf('/')) : '(सीधे ALL CLIENT में)'; ((items[ZF_NOITEM] = items[ZF_NOITEM] || {})[cl] = items[ZF_NOITEM][cl] || []).push(rec); };
+    if (!c) return none();
     let pick = c[0];
-    if (c.length > 1) { const low = rel.toLowerCase(), b = c.filter(x => !x[4] || low.indexOf(String(x[4]).toLowerCase()) >= 0), L = b.length ? b : c; if (new Set(L.map(x => x[2])).size !== 1) return; pick = L[0]; }
-    const party = M.p[pick[3]], code = pick[2]; ((items[party] = items[party] || {})[code] = items[party][code] || []).push([rel, e[1], e[2], pre]); hit++;
+    if (c.length > 1) { const low = rel.toLowerCase(), b = c.filter(x => !x[4] || low.indexOf(String(x[4]).toLowerCase()) >= 0), L = b.length ? b : c; if (new Set(L.map(x => x[2])).size !== 1) return none(); pick = L[0]; }
+    const party = M.p[pick[3]], code = pick[2]; ((items[party] = items[party] || {})[code] = items[party][code] || []).push(rec); hit++;
   }));
   S.zItems = items; S.zHit = hit; S.zTot = tot;
 }
@@ -7368,8 +7371,8 @@ function zfsDrawItems() {
   const by = '<span class="fs-tg"><button onclick="zfsBy(\'fold\')">📁 फ़ोल्डर</button><button class="on">🧩 आइटम से (' + fmtNum(S.zHit || 0) + ' / ' + fmtNum(S.zTot || 0) + ')</button></span>';
   let body = ''; Z.cur = [];
   if (ip.length === 0) {
-    const ps = Object.keys(T).filter(p => !q || p.toLowerCase().indexOf(q) >= 0).sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
-    body = ps.length ? '<div class="fs-grid">' + ps.map(p => '<button class="fs-fold" onclick="zfsIpIn(this)" data-n="' + esc(p) + '"><span>📁</span><b>' + esc(p) + '</b><small class="muted">' + fmtNum(Object.keys(T[p]).length) + ' आइटम</small></button>').join('') + '</div>' : emptyArt('empty-files', 'कुछ नहीं मिला');
+    const ps = Object.keys(T).filter(p => !q || p.toLowerCase().indexOf(q) >= 0).sort((a, b) => a === ZF_NOITEM ? 1 : b === ZF_NOITEM ? -1 : a.toLowerCase() < b.toLowerCase() ? -1 : 1);
+    body = ps.length ? '<div class="fs-grid">' + ps.map(p => '<button class="fs-fold" onclick="zfsIpIn(this)" data-n="' + esc(p) + '"><span>📁</span><b>' + esc(p) + '</b><small class="muted">' + fmtNum(Object.keys(T[p]).length) + (p === ZF_NOITEM ? ' क्लाइंट · ' + fmtNum(Object.keys(T[p]).reduce((s, k) => s + T[p][k].length, 0)) + ' फ़ाइल' : ' आइटम') + '</small></button>').join('') + '</div>' : emptyArt('empty-files', 'कुछ नहीं मिला');
   } else if (ip.length === 1) {
     const its = T[ip[0]] || {}, cs = Object.keys(its).filter(k => !q || k.toLowerCase().indexOf(q) >= 0).sort((a, b) => num(a) - num(b) || (a < b ? -1 : 1));
     body = cs.length ? '<div class="fs-grid">' + cs.map(k => '<button class="fs-fold" onclick="zfsIpIn(this)" data-n="' + esc(k) + '" title="' + esc(k) + '"><span>🧩</span><b>' + esc(k) + '</b><small class="muted">' + fmtNum(its[k].length) + ' फ़ाइल</small></button>').join('') + '</div>' : emptyArt('empty-files', 'कुछ नहीं मिला');
@@ -7382,7 +7385,7 @@ function zfsDrawItems() {
   }
   m.innerHTML = '<div class="fs-page" id="zfsPage"><div class="fs-bar"><span class="fs-cr">' + cr.join(' <span class="muted">›</span> ') + '</span>' + by + '<span class="iw2-sp"></span>'
     + '<input id="zfsQ" class="fs-q" placeholder="🔍 खोजें" value="' + esc(Z.q || '') + '" oninput="zfsSt().q=this.value;clearTimeout(S.zfT);S.zfT=setTimeout(zfsDraw,250)"><button class="btn sm" onclick="zfsRescan()" title="Z: दोबारा पढ़ो">🔄</button></div>'
-    + '<div class="muted small" style="margin:2px 0 8px">Z: से सीधे · आइटम से जुड़ी ' + fmtNum(S.zHit || 0) + ' फ़ाइलें (कुल ' + fmtNum(S.zTot || 0) + ') — बाकी 📁 फ़ोल्डर में</div>' + body + '</div>';
+    + '<div class="muted small" style="margin:2px 0 8px">Z: से सीधे · आइटम से जुड़ी ' + fmtNum(S.zHit || 0) + ' फ़ाइलें (कुल ' + fmtNum(S.zTot || 0) + ') · बिना आइटम ' + fmtNum((S.zTot || 0) - (S.zHit || 0)) + ' · कुल ' + fmtNum(S.zTot || 0) + ' (सब यहाँ दिखती हैं)</div>' + body + '</div>';
 }
 async function zfsOpen(i) { const e = (zfsSt().cur || [])[i]; if (!e) return; try { await window.pcDesk.zOpen(zfsRel(e[0], e[3])); } catch (er) { fail(er); } }
 async function zfsShow(i) { const e = (zfsSt().cur || [])[i]; if (!e) return; try { await window.pcDesk.zShow(zfsRel(e[0], e[3])); } catch (er) { fail(er); } }
