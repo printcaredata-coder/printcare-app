@@ -7463,7 +7463,7 @@ document.addEventListener('paste', e => {
 const DESK_LATEST = '1.0.5';
 async function swLinks() { if (S.swL && S.swL.exe) return S.swL; try { S.swL = await api('apiSoftwareLinks'); } catch (e) { S.swL = {}; } return S.swL; }
 const SW_SITE = 'https:' + String.fromCharCode(47, 47) + 'app.priniva.in';
-async function swGet(kind) { const L = kind === 'zip' ? await swLinks() : {}, u = kind === 'zip' ? L.zip : SW_SITE + '/desktop/PrintCare-Setup.exe'; if (!u) return toast('लिंक नहीं मिला — थोड़ी देर बाद फिर', true); window.open(u, '_blank'); toast('⬇ डाउनलोड शुरू — पूरा होने पर उसे चलाएँ'); }
+async function swGet(kind) { const L = kind === 'zip' ? await swLinks() : {}, u = kind === 'zip' ? L.zip : SW_SITE + '/download.html'; if (!u) return toast('लिंक नहीं मिला — थोड़ी देर बाद फिर', true); window.open(u, '_blank'); toast('⬇ डाउनलोड शुरू — पूरा होने पर उसे चलाएँ'); }
 async function swShare() {
   openModal('🖥 Print Care सॉफ़्टवेयर — दूसरे कंप्यूटर पर', '<div class="small">दूसरे कंप्यूटर (भावना / अंजलि / आपका दूसरा PC) पर Chrome में यह खोलें:</div><input id="swLk" readonly style="width:100%;margin:8px 0;font-size:16px" value="app.priniva.in" onclick="this.select()">' +
     '<div class="small">वहाँ दाईं तरफ़ नीचे <b>🖥 कंप्यूटर सॉफ़्टवेयर डाउनलोड करें</b> दबाएँ → डाउनलोड हुई <b>PrintCare-Setup.exe</b> चलाएँ → डाटा की ड्राइव चुनें → अपना लॉगिन करें — उसी यूज़र का डाटा उतर आएगा। इसमें व्यापार का कोई डाटा नहीं (डाटा लॉगिन के बाद आता है)।</div>' +
