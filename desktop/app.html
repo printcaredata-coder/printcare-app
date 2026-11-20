@@ -9788,7 +9788,7 @@ async function fetchFull(key, fresh) {
     setTimeout(warmTabs, 3000);
   } catch (e) {
     if (seq !== loadSeq) return;
-    setSync('⚠ ताज़ा नहीं हुआ', true);
+    setSync(/NET_OFFLINE/.test((e && e.message) || '') ? '📴 बिना नेट — कंप्यूटर वाला डेटा' : '⚠ ताज़ा नहीं हुआ', true);
     if (!S.full) { fail(e); if ($('tableWrap')) $('tableWrap').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
   }
 }
