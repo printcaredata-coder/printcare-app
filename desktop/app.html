@@ -2433,7 +2433,7 @@ function drawNav() {
     mobItems().filter(x => x.k !== 'settings').map(x => item(x.k.indexOf('tab:') === 0 ? S.view === 'data' && S.tab === x.k.slice(4) : S.view === x.k, String(x.ic).indexOf('<') === 0 || String(x.ic).length > 4 ? x.ic : '<span class="nav-emo">' + x.ic + '</span>', x.k === 'stock' ? 'स्टॉक नोट' : x.t, x.go)).join('') +
     (S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna') ? item(false, '<span class="nav-emo">🕘</span>', 'हाज़िरी', 'attOpen()') : '') +
     (fsCan() ? item(S.view === 'files', '<span class="nav-emo">📁</span>', 'सारे क्लाइंट', "setView('files')") : '') +
-    '<div class="side-gap"></div>' + (setTimeout(swNag, 3000), '') + (S.user && S.user.simple ? '' :
+    '<div class="side-gap"></div>' + (setTimeout(swNag, 3000), setTimeout(taraSyncStart, 3000), '') + (S.user && S.user.simple ? '' :
     item(S.view === 'settings' || S.view === 'users', navIc('icon-settings', '⚙️'), 'ऐप सेटिंग', "setView('settings')"));
   const titles = { files: '📁 सारे क्लाइंट', home: '🏠 होम', settings: '⚙️ ऐप सेटिंग', users: '👥 यूज़र और परमिशन', prod: '🏭 प्रोडक्शन — आज क्या बाकी', buy: '🧾 Workflow — खरीद / बाहर / घर', rates: '📒 रेट मास्टर — हर काम का रेट एक जगह', stock: '📦 स्टॉक नोट — तारा फैक्ट्री' };
   if ($('pageTitle') && !(S.view === 'data' && $('pageTitle').querySelector('#tb2'))) $('pageTitle').innerHTML = S.view === 'data' ? tabIcon(S.tab) + ' ' + esc(S.tab) : (titles[S.view] || '');
@@ -2627,6 +2627,50 @@ function askWhy(title, ph, val) {
   });
 }
 
+/* 🖨💻 तारा के कंप्यूटर में फ़ाइलें अपने-आप (मालिक 20-Nov): ऑर्डर की तारीख से पिछले 30 दिन के तारा वाले ऑर्डर की प्रिंट फ़ाइलें
+ * (B/W + कलर) सॉफ़्टवेयर पीछे से लाता है — सबसे नया JOB पहले. यहाँ करेक्शन (Drive पर फ़ाइल बदली) → तारा के कंप्यूटर में भी नई.
+ * 30 दिन से पुराना ऑर्डर → सिर्फ उसके कंप्यूटर से हटे (ऐप में रहे). खोलना सीधे कंप्यूटर से. */
+function taraIds() { try { return JSON.parse(localStorage.getItem('pc_taraIds') || '{}') || {}; } catch (e) { return {}; } }
+function taraIdsSave(o) { try { localStorage.setItem('pc_taraIds', JSON.stringify(o)); } catch (e) {} }
+function taraSt(t) { S.taraStT = t; const el = $('taraSyncSt'); if (el) el.textContent = t; }
+function taraSyncStart() { if (S.taraSyncT || !window.pcDesk || !window.pcDesk.fileWrite || !S.token) return; S.taraSyncT = 1; setTimeout(taraSync, 8000); setInterval(taraSync, 5 * 60000); }
+async function taraGet(f) {
+  const P = window.pcDesk, r = await downloadParts((st, len) => api('apiTaraPart', S.token, f.id, st, len), '', null);
+  if ((await P.fileInfo([f.id]))[f.id]) { await P.fileSynced(f.id, ''); const x = await P.fileForget(f.id); if (x && x.err) throw new Error(x.err); }
+  await P.fileWrite({ id: f.id, party: f.party || 'तारा', code: f.code, name: f.name, m: f.m }, r.bytes);
+}
+async function taraSync() {
+  if (S.taraBusy || S.taraNo || !S.token || !window.pcDesk) return; S.taraBusy = 1;
+  try {
+    const R = await api('apiTaraLoc', S.token, 1); if (!R || !R.auto) { S.taraNo = 1; return; } S.taraLoc = R;
+    const P = window.pcDesk, L = R.files || [], ids = taraIds(), info = await P.fileInfo(L.map(f => f.id)) || {};
+    let n = 0, bad = 0, i = 0;
+    for (const f of L) {
+      i++; const h = info[f.id];
+      if (h && h.m === f.m) { ids[f.id] = f.m || 1; continue; }
+      try { taraSt('⬇ ' + i + ' / ' + L.length + ' · ' + f.name); await taraGet(f); ids[f.id] = f.m || 1; taraIdsSave(ids); n++; } catch (e) { bad++; }
+    }
+    const keep = new Set(L.map(f => f.id)); let del = 0;
+    for (const id of Object.keys(ids)) { if (keep.has(id)) continue; try { await P.fileSynced(id, ''); const x = await P.fileForget(id); if (!x || !x.err) { delete ids[id]; del++; } } catch (e) {} }
+    taraIdsSave(ids);
+    taraSt('💻 कंप्यूटर में ' + (L.length - bad) + ' फ़ाइलें (पिछले 30 दिन)' + (bad ? ' · ⚠ ' + bad + ' बाद में' : ''));
+    if (n || del) toast('💻 ' + (n ? n + ' फ़ाइल नई / बदली आईं' : '') + (n && del ? ' · ' : '') + (del ? del + ' पुरानी (30 दिन से ऊपर) कंप्यूटर से हटीं' : ''));
+  } catch (e) { taraSt('⚠ फ़ाइलें नहीं आईं — थोड़ी देर में फिर'); } finally { S.taraBusy = 0; }
+}
+async function taraOpen(id, btn) {
+  const P = window.pcDesk; if (!P) return;
+  try {
+    if (!(await P.fileInfo([id]))[id]) {
+      const L = ((S.taraLoc && S.taraLoc.files) || (S.taraLoc = await api('apiTaraLoc', S.token)).files || []), f = L.find(x => x.id === id);
+      if (!f) return toast('यह फ़ाइल 30 दिन वाली लिस्ट में नहीं — ⬇ PDF डाउनलोड से लें', true);
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ आ रही है…'; }
+      await taraGet(f); if (S.taraLoc.auto) { const ids = taraIds(); ids[id] = f.m || 1; taraIdsSave(ids); }
+    }
+    await P.fileOpen(id);
+  } catch (e) { toast(e.message, true); }
+  if (btn) { btn.disabled = false; btn.textContent = '📂 कंप्यूटर से खोलो'; }
+}
+function taraLocBtn(id) { return window.pcDesk && window.pcDesk.fileOpen && id ? `<button class="btn sm primary" onclick="taraOpen('${esc(id)}',this)" title="कंप्यूटर में रखी फ़ाइल सीधे खोलें">📂 कंप्यूटर से खोलो</button>` : ''; }
 /* ---------- 1) 🖨 तारा: फाइल ✅ स्वीकार / ❌ वापस ---------- */
 function taraFileBox(r) {
   if (!r.tfile) return '<div class="tc-file no">⚠ अंदर के पेज की PDF अभी नहीं लगी — अंजलि / भावना से कहें</div>';
@@ -2634,8 +2678,8 @@ function taraFileBox(r) {
   const st = !c ? '<span class="tfc-st wait">⏳ जाँच बाकी</span>' : c.ok ? `<span class="tfc-st ok">✅ स्वीकार · ${esc(c.by)}</span>` : `<span class="tfc-st bad">❌ वापस की · ${esc(c.why)}</span>`;
   const b = can ? (!c || !c.ok ? `<button class="btn sm ok" onclick="taraFileChk('${code}',true,this)">✅ सही है</button>` : '') + (!c || c.ok ? `<button class="btn sm danger" onclick="taraFileChk('${code}',false,this)">❌ वापस करो</button>` : '') : '';
   const oldN = r.tfile.old ? `<div class="tc-file no">🕘 यह पुराना JOB है — उस समय की फाइल (${esc(r.tfile.old.split('-').reverse().join('-'))} तक चली) दिख रही है</div>` : '';
-  const colN = r.tcol ? `<div class="small">🎨 कलर पेज की फाइल: <b>${esc(r.tcol)}</b> <button class="btn sm" onclick="taraPdf('${code}',this,'','color')">⬇ कलर PDF</button>${pcBtn(r.code, r.tcol, r.party)}</div>` : '';
-  return oldN + `<div class="tc-file ${c && c.ok ? 'okf' : ''}"><div><b>📄 ${esc(r.tfile.name)}</b> ${st}${colN}<div class="small">⚠ यही स्वीकृत फाइल प्रिंट करें — दूसरी कोई फाइल इस्तेमाल न करें</div></div><div class="tfc-b">${pcBtn(r.code, r.tfile.name, r.party)}<button class="btn sm primary" onclick="taraPdf('${code}',this,'${esc(r.job)}')">⬇ PDF डाउनलोड</button>${b}</div></div>`;
+  const colN = r.tcol ? `<div class="small">🎨 कलर पेज की फाइल: <b>${esc(r.tcol)}</b> ${taraLocBtn(r.tcolId)}<button class="btn sm" onclick="taraPdf('${code}',this,'','color')">⬇ कलर PDF</button>${pcBtn(r.code, r.tcol, r.party)}</div>` : '';
+  return oldN + `<div class="tc-file ${c && c.ok ? 'okf' : ''}"><div><b>📄 ${esc(r.tfile.name)}</b> ${st}${colN}<div class="small">⚠ यही स्वीकृत फाइल प्रिंट करें — दूसरी कोई फाइल इस्तेमाल न करें</div></div><div class="tfc-b">${taraLocBtn(r.tfile.id)}${pcBtn(r.code, r.tfile.name, r.party)}<button class="btn sm primary" onclick="taraPdf('${code}',this,'${esc(r.job)}')">⬇ PDF डाउनलोड</button>${b}</div></div>`;
 }
 async function taraFileChk(code, ok, btn) {
   let why = '';
@@ -7388,6 +7432,7 @@ async function fsWebDl(i) {
 S.fsUpQ = S.fsUpQ || {};
 async function fsLocSync(meta) {
   if (!meta || !meta.id || S.fsUpQ[meta.id] || !S.token) return;
+  if (taraIds()[meta.id]) return;   /* तारा की फ़ाइल: उसके कंप्यूटर का बदलाव Drive पर नहीं जाता */
   if (S.user && S.user.design && S.user.role !== 'Admin') { if (!S.fsNoSyncT) { S.fsNoSyncT = 1; toast('💻 ' + meta.name + ' — बदलाव सिर्फ इस कंप्यूटर में रहेगा (Drive की असली फ़ाइल नहीं बदलती)'); } return; }
   S.fsUpQ[meta.id] = 1;
   try {
@@ -8617,7 +8662,7 @@ function drawTara() {
     ${pcWho() ? '<div class="pc-home">' + pcSetupBtn() + '</div>' : ''}<div class="tp-head"><div class="seg"><button class="btn ${U.ttab === 'pend' ? 'on' : ''}" onclick="S.prodUi.ttab='pend';drawTara()">⏳ बाकी काम <b>${pend.length}</b></button><button class="btn ${U.ttab === 'done' ? 'on' : ''}" onclick="S.prodUi.ttab='done';drawTara()">✅ पूरे हुए <b>${done.length}</b></button></div>
       <div class="tp-today">आज निकालीं: <b>${fmtNum(todayN)}</b></div><span class="iw2-sp"></span>
       <input type="search" class="tp-q" placeholder="🔍 JOB / ITAM CODE / पार्टी" value="${esc(U.q || '')}" oninput="S.prodUi.q=this.value;clearTimeout(S.pqT);S.pqT=setTimeout(drawTara,250)">
-      <button class="btn sm" onclick="renderProduction()">🔄</button>${S.user && S.user.role === 'Admin' ? '<button class="btn sm" onclick="S.prodUi.tara=false;drawProduction()">🏭 पूरा प्रोडक्शन</button>' : ''}</div>
+      ${window.pcDesk ? '<span id="taraSyncSt" class="small muted">' + esc(S.taraStT || '') + '</span>' : ''}<button class="btn sm" onclick="renderProduction()">🔄</button>${S.user && S.user.role === 'Admin' ? '<button class="btn sm" onclick="S.prodUi.tara=false;drawProduction()">🏭 पूरा प्रोडक्शन</button>' : ''}</div>
     ${list.length ? '<div class="tp-list">' + list.map(card).join('') + '</div>' : emptyArt('all-done', U.ttab === 'done' ? 'अभी कोई काम पूरा नहीं हुआ' : '🎉 कोई काम बाकी नहीं')}
   </div>`;
 }
