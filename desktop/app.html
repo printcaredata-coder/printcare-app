@@ -7187,10 +7187,12 @@ function fsSt() { return S.fs || (S.fs = { party: '', code: '', mode: 'used', q:
 function fsIc(n) { return /\.pdf$/i.test(n) ? '📄' : /\.(cdr|ai|psd)$/i.test(n) ? '🎨' : /\.(zip|rar|7z)$/i.test(n) ? '🗜' : /\.(jpe?g|png|gif|webp|tiff?)$/i.test(n) ? '🖼' : '📎'; }
 function fsGo(party, code) { const F = fsSt(); F.party = party || ''; F.code = code || ''; F.sel = -1; F.q = ''; if (!code) F.mode = 'used'; renderFs(); }
 function fsGoI(k) { const F = fsSt(), x = (F.L || {}).folders[k]; if (!x) return; F.party ? fsGo(F.party, x.name) : fsGo(x.name, ''); }
+function fsKey() { const F = fsSt(); return 'pcfs|' + (typeof WSP === 'function' ? WSP() : '') + [F.party, F.code, F.mode].join('|'); }
+function fsMem(k, L) { try { if (L) localStorage.setItem(k, JSON.stringify(L)); else return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
 async function fsLoad(force) {
-  const F = fsSt(), key = [F.party, F.code, F.mode].join('|'), c = F.C[key];
+  const F = fsSt(), key = fsKey(), c = F.C[key];
   if (!force && c && Date.now() - c.at < 60000) return c.L;
-  const L = await api('apiFsList', S.token, F.party, F.code, F.mode); F.C[key] = { at: Date.now(), L }; return L;
+  const L = await api('apiFsList', S.token, F.party, F.code, F.mode); F.C[key] = { at: Date.now(), L }; fsMem(key, L); return L;
 }
 async function renderFs() {
   if (!fsCan()) return setView('home');
@@ -7209,8 +7211,11 @@ async function renderFs() {
     (F.code ? '<div class="muted small fs-help">⌨ फ़ाइल चुनकर <b>Delete</b> = Unused में (मिटती नहीं) · <b>Ctrl+V</b> या खींचकर डालो = इसी आइटम में अपलोड · ✅ = किसी खाने में लगी है</div>' : '') + '</div>';
   const lst = $('fsList');
   if (F.code && lst) { lst.ondragover = e => { e.preventDefault(); lst.classList.add('drop'); }; lst.ondragleave = () => lst.classList.remove('drop'); lst.ondrop = e => { e.preventDefault(); lst.classList.remove('drop'); fsUpFiles(e.dataTransfer.files); }; }
-  try { F.L = await fsLoad(); } catch (e) { if ($('fsList')) $('fsList').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; return; }
-  fsDraw();
+  /* ⚡ (मालिक 20-Nov: "एक बार आ गया तो फिर टाइम क्यों?") — कंप्यूटर में रखी लिस्ट तुरंत, सर्वर से ताज़ा पीछे से */
+  const key = fsKey(), mem = F.C[key] ? F.C[key].L : fsMem(key);
+  if (mem) { F.L = mem; fsDraw(); if (F.C[key] && Date.now() - F.C[key].at < 60000) return; }
+  try { const L = await fsLoad(true); if (fsKey() !== key) return; if (!mem || JSON.stringify(L) !== JSON.stringify(mem)) { F.L = L; fsDraw(); } }
+  catch (e) { if (!mem && $('fsList')) $('fsList').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
 }
 function fsMode(m) { const F = fsSt(); F.mode = m; F.sel = -1; renderFs(); }
 function fsReload() { const F = fsSt(); F.C = {}; renderFs(); }
