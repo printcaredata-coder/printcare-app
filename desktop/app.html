@@ -8649,7 +8649,7 @@ async function comboSave() {
 function bkpOnly() { const u = S.user; return !!(u && !S.asUser && u.role !== 'Admin' && String(u.username || '').toLowerCase() !== 'bhavna' && bkpOk()); }
 function bkpOk() { const u = S.user; if (!u || S.asUser) return false; if (u.role === 'Admin' || String(u.username || '').toLowerCase() === 'bhavna') return true; return !!(S.procMeta && S.procMeta.see && !(S.tabs || []).length && !u.stock && !u.design); }
 /* हर 60 सेकंड में चुपचाप ताज़ा — फ़ाइल लगते ही ❌ की जगह ✅ आ जाए (मालिक 20-Nov) */
-if (!window.bkpTimer) window.bkpTimer = setInterval(async () => { if (S.view !== 'bkp' || !S.token || document.hidden || Object.keys(S.bkpUp || {}).length) return; try { S.bkpD = await api('apiBkpData', S.token); bkpCacheSave(); if (S.view === 'bkp') drawBkp(); } catch (e) {} }, 60000);
+if (!window.bkpTimer) window.bkpTimer = setInterval(async () => { if (S.view !== 'bkp' || !S.token || document.hidden || Object.keys(S.bkpUp || {}).length) return; try { const D = await api('apiBkpData', S.token), old = JSON.stringify(S.bkpD && S.bkpD.rows); if (JSON.stringify(D.rows) === old) return; const ae = document.activeElement; if (ae && /INPUT|TEXTAREA/.test(ae.tagName) && ae.id && ae.id.indexOf('bo_') === 0 && ae.value) return; S.bkpD = D; bkpCacheSave(); if (S.view === 'bkp') drawBkp(); } catch (e) {} }, 60000);
 /* ⚡ पिछली बार का टेबल इसी कंप्यूटर की याद से तुरंत — पीछे से ताज़ा आए तो बदल जाए (मालिक 20-Nov: तारा का पैनल लोकल जैसा तेज़) */
 function bkpCKey() { return 'bkpC_' + String((S.user && S.user.username) || ''); }
 function bkpCacheSave() { try { if (S.bkpD) localStorage.setItem(bkpCKey(), JSON.stringify({ at: Date.now(), d: S.bkpD })); } catch (e) {} }
@@ -8718,6 +8718,19 @@ async function bkpView(id, title) {
   } catch (e) { if ($('fvBody')) $('fvBody').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
 }
 function drawBkp() {
+  const m = $('main'); if (!m) return;
+  const w = m.querySelector('.bk-w'), keep = { ms: m.scrollTop, wt: w ? w.scrollTop : 0, wl: w ? w.scrollLeft : 0, ps: window.scrollY, vals: {}, f: null };
+  m.querySelectorAll('input[id^="bo_"]').forEach(i => { if (i.value) keep.vals[i.id] = i.value; });
+  const a = document.activeElement; if (a && m.contains(a) && a.id) keep.f = { id: a.id, s: a.selectionStart, e: a.selectionEnd };
+  const qa = m.querySelector('.tp-q'); if (qa && a === qa) keep.f = { q: 1, s: qa.selectionStart, e: qa.selectionEnd };
+  const anc = []; for (let e = m; e; e = e.parentElement) if (e.scrollTop > 0) anc.push([e, e.scrollTop]);
+  drawBkp0();
+  anc.forEach(x => { x[0].scrollTop = x[1]; });
+  const w2 = m.querySelector('.bk-w'); m.scrollTop = keep.ms; if (w2) { w2.scrollTop = keep.wt; w2.scrollLeft = keep.wl; } window.scrollTo(0, keep.ps);
+  Object.keys(keep.vals).forEach(id => { const i = $(id); if (i && !i.value) i.value = keep.vals[id]; });
+  if (keep.f) { const i = keep.f.q ? m.querySelector('.tp-q') : $(keep.f.id); if (i) { try { i.focus(); i.setSelectionRange(keep.f.s, keep.f.e); } catch (e) {} } }
+}
+function drawBkp0() {
   const m = $('main'), D = S.bkpD; if (!m || !D) return;
   const U = S.bkp, act = !!D.act, q = String(U.q || '').toLowerCase();
   const rows = D.rows.filter(r => (U.sh === 'all' || (U.sh === 'open' ? r.left > 0 : r.left <= 0)) && (!q || (r.job + ' ' + r.code + ' ' + r.name + ' ' + r.party).toLowerCase().indexOf(q) >= 0));
