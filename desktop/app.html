@@ -5030,12 +5030,13 @@ async function locPull(force, smPre) {
     /* 3 काम का हिसाब — सिर्फ बदले टुकड़े */
     const nCh = sm.ip.length, ipc = old && old.ipc && O.ch === sm.ch ? old.ipc.slice(0, nCh) : [];
     const need = sm.ip.map((h, i) => !ipc[i] || !same((O.ip || [])[i], h) ? i : -1).filter(i => i >= 0);
-    for (let j = 0; j < need.length; j++) {
-      const i = need[j];
-      locStep(2, j, need.length, 'काम का हिसाब — टुकड़ा ' + (j + 1) + ' / ' + need.length + (need.length < nCh ? ' (सिर्फ बदले)' : ''));
-      const p = await locUnz(await locGet(90000, 'apiLocalPart', S.token, 'ip', i * sm.ch, sm.ch)); ipc[i] = p.o; got += p.n;
-      await new Promise(z => setTimeout(z, 0));
-    }
+    /* ⚡ 4 टुकड़े एक साथ (मालिक 20-Nov: पहली बार 105 टुकड़े एक-एक करके 10+ मिनट) */
+    let nx = 0, dn = 0;
+    locStep(2, 0, need.length || 1, 'काम का हिसाब — ' + need.length + ' टुकड़े (4 एक साथ)' + (need.length < nCh ? ' (सिर्फ बदले)' : ''));
+    const pool = async () => { for (;;) { const j = nx++; if (j >= need.length) return; const i = need[j];
+      const p = await locUnz(await locGet(90000, 'apiLocalPart', S.token, 'ip', i * sm.ch, sm.ch)); ipc[i] = p.o; got += p.n; dn++;
+      locStep(2, dn, need.length, 'काम का हिसाब — टुकड़ा ' + dn + ' / ' + need.length + (need.length < nCh ? ' (सिर्फ बदले)' : '') + ' · 4 एक साथ'); await new Promise(z => setTimeout(z, 0)); } };
+    await Promise.all([pool(), pool(), pool(), pool()]);
     locStep(2, 1, 1, 'काम का हिसाब — ' + fmtNum(sm.n) + ' लाइनें ✓' + (need.length ? ' (' + need.length + ' / ' + nCh + ' टुकड़े नए)' : ' (कुछ नहीं बदला)'));
     /* 4 Workflow · 5 प्रोडक्शन — बदला हो तभी */
     if (!simpleU && lists) {
