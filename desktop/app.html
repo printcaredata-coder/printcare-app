@@ -1802,6 +1802,19 @@
 .fs-pv{position:sticky;top:8px;align-self:start}
 .fs-help{margin-top:10px}.fs-un summary{cursor:pointer;margin:8px 0 4px}
 @media (max-width:900px){.fs-wrap.two{grid-template-columns:1fr}.fs-pv{position:static}}
+/* 📁 फ़ाइल आइकॉन / टाइल */
+.fs-ico{flex:none;display:inline-block;vertical-align:middle}
+.fs-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:4px}
+.fs-tile{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px 8px;border:1px solid transparent;border-radius:8px;cursor:default;user-select:none;text-align:center}
+.fs-tile:hover{background:rgba(31,111,235,.07)}.fs-tile.sel{background:rgba(31,111,235,.14);border-color:rgba(31,111,235,.45)}
+.fs-tile b{font-weight:500;font-size:12.5px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.fs-tb{position:absolute;top:6px;right:8px;display:flex;flex-direction:column;gap:2px;font-size:13px}
+.fs-row .fs-nm{flex:1 1 220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fs-det{border-bottom:1px solid var(--line,#e3e3ea);padding-bottom:8px;margin-bottom:8px}
+.fs-dh{display:flex;gap:10px;align-items:flex-start}.fs-dh b{word-break:break-word}
+.fs-da{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.fs-dl{display:inline-flex;gap:6px;align-items:center}.fs-dl span{font-size:12px;color:var(--muted,#667)}
+.fs-ifn{display:inline-flex;align-items:center;gap:6px}
 </style>
 
 </head>
@@ -7186,12 +7199,25 @@ async function cjFilesGo() {
   savedNote('📎 ClapJoy: ' + items + ' आइटम में ' + tot + ' फ़ाइलें लगीं');
 }
 /* 📁 सारे क्लाइंट (मालिक 20-Nov): कंप्यूटर के ALL CLIENT जैसा — क्लाइंट → आइटम → फ़ाइलें। हमेशा ✅ Used (ताज़ा) पहले; 🗃 Unused अलग।
- * कोई फ़ाइल मिटती नहीं: Delete = Unused में। ✅ = किसी खाने में लगी है (ऊपर रखो तो कहाँ)। Ctrl+V / खींचकर डालो = अपलोड। */
+ * कोई फ़ाइल मिटती नहीं: Delete = Unused में। ✅ = किसी खाने में लगी है (ऊपर रखो तो कहाँ)। Ctrl+V / खींचकर डालो = अपलोड।
+ * फ़ाइल के हिसाब से आइकॉन (PDF / CDR / ZIP / फोटो)। डेस्कटॉप सॉफ़्टवेयर: ⬇ कंप्यूटर में (Print Care Data / फ़ाइलें / क्लाइंट / आइटम) → कंप्यूटर के प्रोग्राम में खुले, Save करो तो Drive पर अपने-आप। */
 const FS_NOITEM = '📂 बिना आइटम';
 const FS_SLOTS = [['TARA', 'inner', '⚫ तारा प्रिंट (अंदर के पेज)'], ['TARA', 'color', '🎨 कलर पेज'], ['TARA', 'cover', '📕 कवर'], ['TARA', 'cdr', '🎨 CDR'], ['OFFSET', 'prn', '🖨 ऑफ़सेट प्रिंटिंग']];
-function fsCan() { return !!(S.user && !S.asUser && (S.user.role === 'Admin' || S.user.simple || S.user.design)); }
-function fsSt() { return S.fs || (S.fs = { party: '', code: '', mode: 'used', q: '', att: '', sel: -1, C: {} }); }
+const FS_EXT = { pdf: ['#e5322d', 'PDF'], cdr: ['#2e9e46', 'CDR'], ai: ['#ff7c00', 'AI'], psd: ['#2f6fdb', 'PSD'], zip: ['#c9962a', 'ZIP'], rar: ['#8e44ad', 'RAR'], '7z': ['#555', '7Z'],
+  jpg: ['#1e88e5', 'JPG'], jpeg: ['#1e88e5', 'JPG'], png: ['#00897b', 'PNG'], gif: ['#00897b', 'GIF'], webp: ['#00897b', 'IMG'], tif: ['#00897b', 'TIF'], tiff: ['#00897b', 'TIF'],
+  xls: ['#1d6f42', 'XLS'], xlsx: ['#1d6f42', 'XLS'], csv: ['#1d6f42', 'CSV'], doc: ['#2b579a', 'DOC'], docx: ['#2b579a', 'DOC'], txt: ['#7a8699', 'TXT'], indd: ['#d6336c', 'INDD'], eps: ['#ff7c00', 'EPS'] };
+/** 🎨 फ़ाइल का आइकॉन (कंप्यूटर जैसा): कागज़ + मुड़ा कोना + रंगीन पट्टी पर PDF / CDR … */
+function fsIco(name, px) {
+  const ext = (String(name || '').match(/\.([a-z0-9]{1,5})$/i) || [0, ''])[1].toLowerCase(), e = FS_EXT[ext] || ['#7a8699', (ext || 'FILE').toUpperCase().slice(0, 4)];
+  const w = px || 40, h = Math.round(w * 1.2);
+  return '<svg class="fs-ico" width="' + w + '" height="' + h + '" viewBox="0 0 40 48" aria-hidden="true"><path d="M5 1h21l11 11v33a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2z" fill="#fff" stroke="#c6ccd8"/>' +
+    '<path d="M26 1v9a2 2 0 0 0 2 2h9" fill="#eef1f6" stroke="#c6ccd8"/><rect x="0" y="27" width="34" height="13" rx="2" fill="' + e[0] + '"/>' +
+    '<text x="17" y="36.6" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="' + (e[1].length > 3 ? 7.5 : 9) + '" fill="#fff">' + e[1] + '</text></svg>';
+}
 function fsIc(n) { return /\.pdf$/i.test(n) ? '📄' : /\.(cdr|ai|psd)$/i.test(n) ? '🎨' : /\.(zip|rar|7z)$/i.test(n) ? '🗜' : /\.(jpe?g|png|gif|webp|tiff?)$/i.test(n) ? '🖼' : '📎'; }
+function fsCan() { return !!(S.user && !S.asUser && (S.user.role === 'Admin' || S.user.simple || S.user.design)); }
+function fsSt() { return S.fs || (S.fs = { party: '', code: '', mode: 'used', q: '', att: '', sel: -1, C: {}, vw: prefs.get('fsVw', 'ico') }); }
+function fsDesk() { return !!(window.pcDesk && window.pcDesk.fileWrite); }
 function fsGo(party, code) { const F = fsSt(); F.party = party || ''; F.code = code || ''; F.sel = -1; F.q = ''; if (!code) F.mode = 'used'; renderFs(); }
 function fsGoI(k) { const F = fsSt(), x = (F.L || {}).folders[k]; if (!x) return; F.party ? fsGo(F.party, x.name) : fsGo(x.name, ''); }
 function fsKey() { const F = fsSt(); return 'pcfs|' + (typeof WSP === 'function' ? WSP() : '') + [F.party, F.code, F.mode].join('|'); }
@@ -7208,66 +7234,150 @@ async function renderFs() {
   if (F.party) cr.push('<button class="link" onclick="fsGo(fsSt().party)">' + esc(F.party) + '</button>');
   if (F.code) cr.push('<b>' + esc(F.code) + '</b>');
   const tg = F.code ? '<span class="fs-tg"><button class="' + (F.mode === 'used' ? 'on' : '') + '" onclick="fsMode(\'used\')">✅ Used (ताज़ा)</button><button class="' + (F.mode === 'unused' ? 'on' : '') + '" onclick="fsMode(\'unused\')">🗃 Unused (पुरानी)</button></span>' +
-    '<select class="fs-af" onchange="fsSt().att=this.value;fsDraw()"><option value="">सब फ़ाइलें</option><option value="on"' + (F.att === 'on' ? ' selected' : '') + '>✅ जो लगी हैं</option><option value="off"' + (F.att === 'off' ? ' selected' : '') + '>⬜ जो नहीं लगीं</option></select>' : '';
+    '<select class="fs-af" onchange="fsSt().att=this.value;fsDraw()"><option value="">सब फ़ाइलें</option><option value="on"' + (F.att === 'on' ? ' selected' : '') + '>✅ जो लगी हैं</option><option value="off"' + (F.att === 'off' ? ' selected' : '') + '>⬜ जो नहीं लगीं</option></select>' +
+    '<span class="fs-tg"><button class="' + (F.vw !== 'list' ? 'on' : '') + '" onclick="fsVw(\'ico\')" title="बड़े आइकॉन">▦ आइकॉन</button><button class="' + (F.vw === 'list' ? 'on' : '') + '" onclick="fsVw(\'list\')" title="लिस्ट">☰ लिस्ट</button></span>' : '';
   m.innerHTML = '<div class="fs-page" id="fsPage"><div class="fs-bar"><span class="fs-cr">' + cr.join(' <span class="muted">›</span> ') + '</span>' + tg +
-    '<span class="iw2-sp"></span><input id="fsQ" class="fs-q" placeholder="🔍 नाम से खोजें" value="' + esc(F.q) + '" oninput="fsSt().q=this.value;fsDraw()">' +
+    '<span class="iw2-sp"></span><input id="fsQ" class="fs-q" placeholder="🔍 नाम से खोजें (Ctrl+F)" value="' + esc(F.q) + '" oninput="fsSt().q=this.value;fsDraw()">' +
     (F.code ? '<label class="btn sm">📤 फ़ाइल डालो<input type="file" hidden multiple onchange="fsUpFiles(this.files);this.value=\'\'"></label>' : '') +
+    (F.code && fsDesk() ? '<button class="btn sm" onclick="fsShowDir()" title="कंप्यूटर में इस आइटम का फ़ोल्डर">💻 फ़ोल्डर</button>' : '') +
     '<button class="btn sm" onclick="fsReload()" title="ताज़ा करें">🔄</button></div>' +
     '<div class="fs-wrap' + (F.code ? ' two' : '') + '"><div id="fsList" class="fs-list"><div class="loading">लोड हो रहा है…</div></div>' +
-    (F.code ? '<div class="fs-pv iw2-card"><div class="iw2-pvh"><h4 id="fsPh">प्रीव्यू</h4></div><div id="fsPrev" class="pdfhost iw-pv">' + emptyArt('empty-files', 'किसी फ़ाइल पर क्लिक करें — यहाँ दिखेगी') + '</div></div>' : '') + '</div>' +
-    (F.code ? '<div class="muted small fs-help">⌨ फ़ाइल चुनकर <b>Delete</b> = Unused में (मिटती नहीं) · <b>Ctrl+V</b> या खींचकर डालो = इसी आइटम में अपलोड · ✅ = किसी खाने में लगी है</div>' : '') + '</div>';
+    (F.code ? '<div class="fs-pv iw2-card"><div id="fsDet" class="fs-det"><div class="muted small">किसी फ़ाइल पर क्लिक करें</div></div><div id="fsPrev" class="pdfhost iw-pv">' + emptyArt('empty-files', 'फ़ाइल चुनें — प्रीव्यू यहाँ') + '</div></div>' : '') + '</div>' +
+    (F.code ? '<div class="muted small fs-help">⌨ एक क्लिक = चुनो + प्रीव्यू · दो क्लिक = खोलो' + (fsDesk() ? ' (कंप्यूटर के प्रोग्राम में)' : '') + ' · <b>Delete</b> = Unused में (मिटती नहीं) · <b>Ctrl+V</b> या खींचकर डालो = अपलोड · <b>Backspace</b> = एक कदम पीछे · ✅ = किसी खाने में लगी · 💻 = कंप्यूटर में है</div>' : '') + '</div>';
   const lst = $('fsList');
   if (F.code && lst) { lst.ondragover = e => { e.preventDefault(); lst.classList.add('drop'); }; lst.ondragleave = () => lst.classList.remove('drop'); lst.ondrop = e => { e.preventDefault(); lst.classList.remove('drop'); fsUpFiles(e.dataTransfer.files); }; }
-  /* ⚡ (मालिक 20-Nov: "एक बार आ गया तो फिर टाइम क्यों?") — कंप्यूटर में रखी लिस्ट तुरंत, सर्वर से ताज़ा पीछे से */
+  /* ⚡ कंप्यूटर में रखी लिस्ट तुरंत, सर्वर से ताज़ा पीछे से */
   const key = fsKey(), mem = F.C[key] ? F.C[key].L : fsMem(key);
   if (mem) { F.L = mem; fsDraw(); if (F.C[key] && Date.now() - F.C[key].at < 60000) return; }
   try { const L = await fsLoad(true); if (fsKey() !== key) return; if (!mem || JSON.stringify(L) !== JSON.stringify(mem)) { F.L = L; fsDraw(); } }
   catch (e) { if (!mem && $('fsList')) $('fsList').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
 }
 function fsMode(m) { const F = fsSt(); F.mode = m; F.sel = -1; renderFs(); }
+function fsVw(v) { const F = fsSt(); F.vw = v; prefs.set('fsVw', v); renderFs(); }
 function fsReload() { const F = fsSt(); F.C = {}; renderFs(); }
+function fsTip(f) { return (f.on || []).map(a => a.label || (FS_SLOTS.find(s => s[0] === a.proc && s[1] === a.slot) || [0, 0, a.proc + ' / ' + a.slot])[2]).join(', '); }
 function fsDraw() {
   const F = fsSt(), el = $('fsList'), L = F.L; if (!el || !L) return;
   const q = String(F.q || '').trim().toLowerCase();
   if (!F.code) {
     const fo = L.folders.map((x, k) => ({ x, k })).filter(o => !q || o.x.name.toLowerCase().indexOf(q) >= 0);
-    el.innerHTML = fo.length ? '<div class="fs-grid">' + fo.map(o => '<button class="fs-fold' + (o.x.name === FS_NOITEM ? ' noitem' : '') + '" onclick="fsGoI(' + o.k + ')"><span>' + (o.x.name === FS_NOITEM ? '📂' : '📁') + '</span><b>' + esc(o.x.name) + '</b></button>').join('') + '</div>'
+    el.innerHTML = fo.length ? '<div class="fs-grid">' + fo.map(o => '<button class="fs-fold' + (o.x.name === FS_NOITEM ? ' noitem' : '') + '" onclick="fsGoI(' + o.k + ')" title="' + esc(o.x.name) + '"><span>' + (o.x.name === FS_NOITEM ? '📂' : '📁') + '</span><b>' + esc(o.x.name) + '</b></button>').join('') + '</div>'
       : emptyArt('empty-files', F.party ? 'इस क्लाइंट का अभी कोई फ़ोल्डर नहीं' : 'अभी कोई क्लाइंट फ़ोल्डर नहीं');
     return;
   }
   const fl = L.files.map((f, i) => ({ f, i })).filter(o => (!q || o.f.name.toLowerCase().indexOf(q) >= 0) && (!F.att || (F.att === 'on') === !!(o.f.on && o.f.on.length)));
   if (!fl.length) { el.innerHTML = emptyArt('empty-files', F.mode === 'unused' ? '🗃 Unused में कोई फ़ाइल नहीं' : 'कोई फ़ाइल नहीं — Ctrl+V या 📤 से डालें'); return; }
-  const noI = F.code === FS_NOITEM, can = !(S.user && S.user.viewonly);
-  el.innerHTML = '<div class="fs-rows">' + fl.map(({ f, i }) => {
-    const on = f.on || [], tip = on.map(a => a.label || (FS_SLOTS.find(s => s[0] === a.proc && s[1] === a.slot) || [0, 0, a.proc + ' / ' + a.slot])[2]).join(', ');
-    const cur = on[0] ? on[0].proc + '|' + on[0].slot : '';
-    const sel = noI ? '' : '<select class="fs-who" onchange="fsWho(' + i + ',this.value)"' + (can && F.mode === 'used' ? '' : ' disabled') + '><option value="">— किसकी है —</option>' + FS_SLOTS.map(s => '<option value="' + s[0] + '|' + s[1] + '"' + (cur === s[0] + '|' + s[1] ? ' selected' : '') + '>' + s[2] + '</option>').join('') + (cur ? '<option value="x">✖ कहीं नहीं (हटाओ)</option>' : '') + '</select>';
-    const hist = f.hist ? '<span class="muted small" title="पहले लगी थी">🕘 ' + esc(f.hist.until || '') + (f.hist.untilJob ? ' · JOB ' + esc(f.hist.untilJob) : '') + ' तक</span>' : '';
-    return '<div class="fs-row' + (F.sel === i ? ' sel' : '') + '" onclick="fsSel(' + i + ')" ondblclick="fsOpen(' + i + ')">' +
-      '<span class="fs-ok" title="' + esc(tip ? 'लगी है: ' + tip : 'किसी खाने में नहीं लगी') + '">' + (on.length ? '✅' : '⬜') + '</span>' +
-      '<button type="button" class="iw-fn fs-nm" onclick="event.stopPropagation();fsSel(' + i + ');fsOpen(' + i + ')" title="' + esc(f.name) + '">' + fsIc(f.name) + ' ' + esc(f.name) + '</button>' +
-      '<span class="muted small">' + (f.size / 1048576).toFixed(1) + ' MB · ' + esc(f.at || '') + '</span>' + hist + sel +
-      (can ? '<span class="fs-act"><button class="btn sm" onclick="event.stopPropagation();fsRen(' + i + ')" title="नाम बदलो">✏ नाम</button>' +
-        '<button class="btn sm" onclick="event.stopPropagation();fsMoveAsk(' + i + ')" title="दूसरे आइटम में डालो">➡ दूसरे आइटम में</button>' +
-        (F.mode === 'used' ? '<button class="btn sm" onclick="event.stopPropagation();fsUnuse(' + i + ')" title="Unused में (मिटती नहीं)">🗃 Unused</button>' : '<button class="btn sm" onclick="event.stopPropagation();fsRestore(' + i + ')" title="वापस Used में">♻ वापस</button>') + '</span>' : '') +
-      '</div>';
-  }).join('') + '</div>';
+  const loc = f => fsDesk() && F.loc && F.loc[f.id] ? '<span class="fs-loc" title="कंप्यूटर में है' + (F.loc[f.id].changed ? ' — बदली हुई, Drive पर जा रही है' : '') + '">' + (F.loc[f.id].changed ? '⏫' : '💻') + '</span>' : '';
+  if (F.vw !== 'list') {
+    el.innerHTML = '<div class="fs-tiles">' + fl.map(({ f, i }) => '<div class="fs-tile' + (F.sel === i ? ' sel' : '') + '" data-i="' + i + '" onclick="fsSel(' + i + ')" ondblclick="fsDbl(' + i + ')" title="' + esc(f.name + (fsTip(f) ? '\nलगी है: ' + fsTip(f) : '')) + '">' +
+      fsIco(f.name, 44) + '<span class="fs-tb">' + ((f.on || []).length ? '<span class="fs-ok">✅</span>' : '') + loc(f) + '</span><b>' + esc(f.name) + '</b></div>').join('') + '</div>';
+  } else {
+    el.innerHTML = '<div class="fs-rows">' + fl.map(({ f, i }) => {
+      const tip = fsTip(f);
+      return '<div class="fs-row' + (F.sel === i ? ' sel' : '') + '" data-i="' + i + '" onclick="fsSel(' + i + ')" ondblclick="fsDbl(' + i + ')">' +
+        '<span class="fs-ok" title="' + esc(tip ? 'लगी है: ' + tip : 'किसी खाने में नहीं लगी') + '">' + ((f.on || []).length ? '✅' : '⬜') + '</span>' + fsIco(f.name, 22) +
+        '<span class="fs-nm" title="' + esc(f.name) + '">' + esc(f.name) + '</span>' + loc(f) +
+        '<span class="muted small">' + (f.size / 1048576).toFixed(1) + ' MB · ' + esc(f.at || '') + '</span>' + (tip ? '<span class="muted small">' + esc(tip) + '</span>' : '') + '</div>';
+    }).join('') + '</div>';
+  }
+  if (F.sel >= 0) fsDetDraw(F.sel);
+  fsLocCheck();
 }
-function fsSel(i) { const F = fsSt(); F.sel = i; document.querySelectorAll('.fs-row.sel').forEach(r => r.classList.remove('sel')); const rows = document.querySelectorAll('.fs-row'); rows.forEach(r => { if (r.getAttribute('onclick') === 'fsSel(' + i + ')') r.classList.add('sel'); }); }
+/** 💻 कौन-सी फ़ाइल कंप्यूटर में है (डेस्कटॉप सॉफ़्टवेयर) */
+async function fsLocCheck() {
+  const F = fsSt(); if (!fsDesk() || !F.code || !F.L) return;
+  try {
+    const r = await window.pcDesk.fileInfo(F.L.files.map(f => f.id)); const was = JSON.stringify(F.loc || {});
+    F.loc = r || {}; if (JSON.stringify(F.loc) !== was) { fsDraw(); }
+  } catch (e) {}
+}
+function fsSel(i) {
+  const F = fsSt(); F.sel = i;
+  document.querySelectorAll('.fs-row.sel,.fs-tile.sel').forEach(r => r.classList.remove('sel'));
+  document.querySelectorAll('[data-i="' + i + '"]').forEach(r => r.classList.add('sel'));
+  fsDetDraw(i); fsOpen(i);
+}
+function fsDetDraw(i) {
+  const F = fsSt(), f = ((F.L || {}).files || [])[i], el = $('fsDet'); if (!f || !el) return;
+  const on = f.on || [], cur = on[0] ? on[0].proc + '|' + on[0].slot : '', can = !(S.user && S.user.viewonly), noI = F.code === FS_NOITEM, lc = (F.loc || {})[f.id];
+  const sel = noI ? '' : '<label class="fs-dl"><span>किसकी है</span><select onchange="fsWho(' + i + ',this.value)"' + (can && F.mode === 'used' ? '' : ' disabled') + '><option value="">— कहीं नहीं लगी —</option>' + FS_SLOTS.map(s => '<option value="' + s[0] + '|' + s[1] + '"' + (cur === s[0] + '|' + s[1] ? ' selected' : '') + '>' + s[2] + '</option>').join('') + (cur ? '<option value="x">✖ खाने से हटाओ</option>' : '') + '</select></label>';
+  const hist = f.hist ? '<div class="muted small">🕘 पहले लगी थी — ' + esc(f.hist.until || '') + (f.hist.untilJob ? ' · JOB ' + esc(f.hist.untilJob) : '') + ' तक</div>' : '';
+  const desk = fsDesk() ? (lc ? '<button class="btn sm primary" onclick="fsLocOpen(' + i + ')">📂 कंप्यूटर में खोलो</button><button class="btn sm" onclick="fsLocShow(' + i + ')">💻 फ़ोल्डर में दिखाओ</button>'
+    : '<button class="btn sm primary" onclick="fsLocGet(' + i + ',false)">⬇ कंप्यूटर में</button><button class="btn sm" onclick="fsLocGet(' + i + ',true)">⬇ लाकर खोलो</button>') : '<button class="btn sm" onclick="fsWebDl(' + i + ')">⬇ Download</button>';
+  el.innerHTML = '<div class="fs-dh">' + fsIco(f.name, 34) + '<div><b>' + esc(f.name) + '</b><div class="muted small">' + (f.size / 1048576).toFixed(1) + ' MB · ' + esc(f.at || '') + (on.length ? ' · ✅ लगी है: ' + esc(fsTip(f)) : ' · ⬜ किसी खाने में नहीं') + (lc ? ' · 💻 कंप्यूटर में' : '') + '</div>' + hist + '</div></div>' +
+    '<div class="fs-da">' + sel + desk + (can ? '<button class="btn sm" onclick="fsRen(' + i + ')">✏ नाम</button><button class="btn sm" onclick="fsMoveAsk(' + i + ')">➡ दूसरे आइटम में</button>' +
+      (F.mode === 'used' ? '<button class="btn sm" onclick="fsUnuse(' + i + ')">🗃 Unused</button>' : '<button class="btn sm" onclick="fsRestore(' + i + ')">♻ वापस Used</button>') : '') + '</div>';
+}
+function fsDbl(i) { if (fsDesk()) { const F = fsSt(), f = F.L.files[i]; if (F.loc && F.loc[f.id]) fsLocOpen(i); else fsLocGet(i, true); } else fsOpen(i); }
 async function fsOpen(i) {
   const F = fsSt(), f = ((F.L || {}).files || [])[i], box = $('fsPrev'); if (!f || !box) return;
-  if ($('fsPh')) $('fsPh').innerHTML = fsIc(f.name) + ' <b>' + esc(f.name) + '</b>';
-  if (!/\.(pdf|jpe?g|png|gif|webp|txt)$/i.test(f.name)) { box.innerHTML = emptyArt('empty-files', fsIc(f.name) + ' ' + esc(f.name) + ' — इसका प्रीव्यू ऐप में नहीं दिखता (' + (f.size / 1048576).toFixed(1) + ' MB)'); return; }
+  if (!/\.(pdf|jpe?g|png|gif|webp|txt)$/i.test(f.name)) { box.innerHTML = '<div class="empty art"><div style="margin:20px auto">' + fsIco(f.name, 90) + '</div><div class="ea-t">' + esc(f.name) + ' — इसका प्रीव्यू ऐप में नहीं बनता' + (fsDesk() ? '<br>दो बार क्लिक करें = कंप्यूटर के प्रोग्राम (जैसे CorelDRAW) में खुलेगी' : '') + '</div></div>'; return; }
   box.innerHTML = '<div class="progress" style="margin-top:8px"><div id="fsBar" class="progress-bar"></div><span id="fsPct">फ़ाइल खुल रही है…</span></div>';
   const prog = (g, t) => { if ($('fsBar') && t) { $('fsBar').style.width = Math.round(100 * g / t) + '%'; $('fsPct').textContent = (g / 1048576).toFixed(1) + ' / ' + (t / 1048576).toFixed(1) + ' MB'; } };
   const party = F.party, code = F.code;
   try {
-    const key = 'if_' + f.id + '_' + (f.size || ''), hit = await fileCacheGet(key);
-    const r = hit || await downloadParts((st, len) => api('apiFsPart', S.token, party, code, f.id, st, len), key, prog);
+    let r = null;
+    if (fsDesk() && F.loc && F.loc[f.id]) { try { const b = await window.pcDesk.fileRead(f.id); if (b) r = { name: f.name, mime: /\.pdf$/i.test(f.name) ? 'application/pdf' : '', bytes: b }; } catch (e) { r = null; } }
+    if (!r) { const key = 'if_' + f.id + '_' + (f.size || ''), hit = await fileCacheGet(key); r = hit || await downloadParts((st, len) => api('apiFsPart', S.token, party, code, f.id, st, len), key, prog); }
     const R = { name: r.name || f.name, mime: r.mime, bytes: new Uint8Array(r.bytes), blob: new Blob([r.bytes], { type: r.mime }) };
-    if ($('fsPrev') && fsSt().code === code) await renderFileInto($('fsPrev'), R);
+    if ($('fsPrev') && fsSt().code === code && fsSt().sel === i) await renderFileInto($('fsPrev'), R);
   } catch (e) { if ($('fsPrev')) $('fsPrev').innerHTML = '<div class="empty">' + esc(e.message || 'फ़ाइल नहीं खुली') + '</div>'; }
 }
+/* ---------- 💻 कंप्यूटर में फ़ाइल (सिर्फ डेस्कटॉप सॉफ़्टवेयर) ---------- */
+function fsMeta(f) { const F = fsSt(); return { id: f.id, party: F.party, code: F.code, name: f.name, m: f.m || '' }; }
+async function fsGetBytes(f, party, code, note) {
+  const r = await downloadParts((st, len) => api('apiFsPart', S.token, party, code, f.id, st, len), '', (g, t) => { if (note && t) toast(note + ' ' + Math.round(100 * g / t) + '%'); });
+  return r.bytes;
+}
+async function fsLocGet(i, open) {
+  const F = fsSt(), f = F.L.files[i]; if (!f || !fsDesk()) return;
+  try {
+    const b = await fsGetBytes(f, F.party, F.code, '⬇ ' + f.name);
+    const r = await window.pcDesk.fileWrite(fsMeta(f), b);
+    toast(r && r.conflict ? '⚠ आपकी बदली हुई फ़ाइल भी है — Drive वाली "' + r.name + '" नाम से रखी' : '💻 कंप्यूटर में रखी: ' + f.name);
+    await fsLocCheck(); fsDetDraw(i);
+    if (open) await window.pcDesk.fileOpen(f.id);
+  } catch (e) { toast(e.message, true); }
+}
+async function fsLocOpen(i) {
+  const F = fsSt(), f = F.L.files[i]; if (!f) return;
+  const lc = (F.loc || {})[f.id];
+  /* Drive पर नई (किसी और ने बदली) और यहाँ कोई बदलाव नहीं → पहले नई लाओ */
+  if (lc && f.m && lc.m && f.m > lc.m && !lc.changed) { toast('☁ Drive पर नई — ला रहे हैं…'); return fsLocGet(i, true); }
+  if (lc && f.m && lc.m && f.m > lc.m && lc.changed) toast('⚠ Drive और कंप्यूटर दोनों में बदली — अभी आपकी वाली खुल रही है; Drive वाली के लिए ⬇ दबाएँ', true);
+  try { await window.pcDesk.fileOpen(f.id); } catch (e) { toast(e.message, true); }
+}
+function fsLocShow(i) { const F = fsSt(), f = F.L.files[i]; if (f) window.pcDesk.fileShow(f.id); }
+function fsShowDir() { const F = fsSt(); window.pcDesk.dirShow(F.party, F.code); }
+async function fsWebDl(i) {
+  const F = fsSt(), f = F.L.files[i]; if (!f) return;
+  try {
+    const key = 'if_' + f.id + '_' + (f.size || ''), r = (await fileCacheGet(key)) || await downloadParts((st, len) => api('apiFsPart', S.token, F.party, F.code, f.id, st, len), key, null);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([r.bytes], { type: r.mime || 'application/octet-stream' })); a.download = f.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  } catch (e) { toast(e.message, true); }
+}
+/** ⏫ कंप्यूटर में Save हुई फ़ाइल → Drive पर उसी फ़ाइल का नया वर्ज़न (डेस्कटॉप सॉफ़्टवेयर बताता है) */
+S.fsUpQ = S.fsUpQ || {};
+async function fsLocSync(meta) {
+  if (!meta || !meta.id || S.fsUpQ[meta.id] || !S.token) return;
+  S.fsUpQ[meta.id] = 1;
+  try {
+    const b = await window.pcDesk.fileRead(meta.id); if (!b) throw new Error('फ़ाइल नहीं पढ़ी गई');
+    const file = new Blob([b]), CH = 4 * 1048576;
+    toast('⏫ ' + meta.name + ' — Drive पर भेज रहे हैं…');
+    const st = await api('apiFsUpd', S.token, meta.party, meta.code, meta.id, file.size);
+    if (!st.done) for (let s2 = 0; s2 < file.size; s2 += CH) {
+      const b64 = await blobB64(file.slice(s2, Math.min(file.size, s2 + CH)));
+      let tries = 0; for (;;) { try { await api('apiFolderUploadChunk', S.token, st.uploadId, s2, b64); break; } catch (e) { if (++tries >= 3) throw e; await new Promise(z => setTimeout(z, 1500 * tries)); } }
+    }
+    const m = await api('apiFsMod', S.token, meta.party, meta.code, meta.id);
+    await window.pcDesk.fileSynced(meta.id, m.m || '');
+    toast('☁ ' + meta.name + ' — Drive पर सिंक ✓'); savedNote('☁ ' + meta.name + ' Drive पर सिंक');
+    const F = fsSt(); F.C = {}; if (S.view === 'files' && F.code === meta.code) fsAfter('');
+  } catch (e) { toast('⚠ ' + meta.name + ' सिंक नहीं हुई (' + e.message + ') — थोड़ी देर बाद अपने-आप फिर', true); try { window.pcDesk.fileSyncFail(meta.id); } catch (x) {} }
+  finally { delete S.fsUpQ[meta.id]; }
+}
+try { if (window.pcDesk && window.pcDesk.onFileChanged) window.pcDesk.onFileChanged(m => fsLocSync(m)); } catch (e) {}
 async function fsAfter(msg) { const F = fsSt(); F.C = {}; S.offAllC = null; try { F.L = await fsLoad(true); } catch (e) {} fsDraw(); if (msg) toast(msg); }
 async function fsWho(i, v) {
   const F = fsSt(), f = F.L.files[i]; if (!f) return;
@@ -7281,18 +7391,18 @@ async function fsWho(i, v) {
 async function fsUnuse(i) {
   const F = fsSt(), f = F.L.files[i]; if (!f) return;
   if (!(await askYes('🗃 "' + f.name + '" Unused में डालें?' + (f.on && f.on.length ? '\nयह किसी खाने में लगी है — वहाँ से भी हट जाएगी।' : '') + '\n(मिटेगी नहीं — 🗃 Unused से ♻ वापस ला सकते हैं)', '🗃 हाँ, Unused में'))) return;
-  try { await api('apiFsUnuse', S.token, F.code, f.id, F.party); fsAfter('🗃 Unused में गई'); } catch (e) { toast(e.message, true); }
+  try { await api('apiFsUnuse', S.token, F.code, f.id, F.party); F.sel = -1; fsAfter('🗃 Unused में गई'); } catch (e) { toast(e.message, true); }
 }
-async function fsRestore(i) { const F = fsSt(), f = F.L.files[i]; if (!f) return; try { await api('apiFsRestore', S.token, F.code, f.id); fsAfter('♻ वापस Used में'); } catch (e) { toast(e.message, true); } }
+async function fsRestore(i) { const F = fsSt(), f = F.L.files[i]; if (!f) return; try { await api('apiFsRestore', S.token, F.code, f.id); F.sel = -1; fsAfter('♻ वापस Used में'); } catch (e) { toast(e.message, true); } }
 async function fsRen(i) {
   const F = fsSt(), f = F.L.files[i]; if (!f) return;
   const n = await askWhy('✏ नया नाम', 'फ़ाइल का नाम', f.name); if (!n || n.trim() === f.name) return;
-  try { await api('apiFsRename', S.token, F.code, f.id, n.trim()); fsAfter('✏ नाम बदला'); } catch (e) { toast(e.message, true); }
+  try { await api('apiFsRename', S.token, F.code, f.id, n.trim()); if (fsDesk()) { try { await window.pcDesk.fileRename(f.id, n.trim()); } catch (e) {} } fsAfter('✏ नाम बदला'); } catch (e) { toast(e.message, true); }
 }
 async function fsMoveAsk(i) {
   const F = fsSt(), f = F.L.files[i]; if (!f) return;
   const to = await askWhy('➡ किस आइटम में डालें? (ITAM CODE लिखें)', 'जैसे ' + (F.party || 'Amit Popli') + ' - 5', F.code === FS_NOITEM ? F.party + ' - ' : ''); if (!to || !to.trim()) return;
-  try { await api('apiFsMove', S.token, F.party, F.code, f.id, to.trim()); fsAfter('➡ ' + to.trim() + ' में गई'); } catch (e) { toast(e.message, true); }
+  try { await api('apiFsMove', S.token, F.party, F.code, f.id, to.trim()); F.sel = -1; fsAfter('➡ ' + to.trim() + ' में गई'); } catch (e) { toast(e.message, true); }
 }
 async function fsUpFiles(files) {
   const F = fsSt(); files = Array.from(files || []); if (!F.code || !files.length) return;
@@ -7355,7 +7465,7 @@ async function offAllLoad() {
     if (!L || !L.length) { el.innerHTML = ''; return; }
     S.offAllL = L;
     /* 👁 दाईं तरफ़, क्लिक = ऐप के अंदर ही खुले (मालिक 20-Nov) */
-    const row = (f, i) => '<div class="off-fr"><button type="button" class="iw-fn" onclick="itemFileShow(' + i + ')">' + fsIc(f.name) + ' ' + esc(f.name) + '</button><span class="muted small">' + (f.size / 1048576).toFixed(1) + ' MB · ' + esc(f.at || '') + '</span></div>';
+    const row = (f, i) => '<div class="off-fr"><button type="button" class="iw-fn fs-ifn" onclick="itemFileShow(' + i + ')">' + fsIco(f.name, 18) + ' ' + esc(f.name) + '</button><span class="muted small">' + (f.size / 1048576).toFixed(1) + ' MB · ' + esc(f.at || '') + '</span></div>';
     const U = L.map((f, i) => ({ f, i })), used = U.filter(o => !o.f.u), un = U.filter(o => o.f.u);   /* ✅ ताज़ा ऊपर; 🗃 पुरानी नीचे — ताज़ा न हो तो पुरानी खुली (मालिक 20-Nov) */
     el.innerHTML = '<h4>📎 आइटम की फ़ाइलें (' + used.length + ')</h4>' + used.map(o => row(o.f, o.i)).join('') +
       (un.length ? '<details class="fs-un"' + (used.length ? '' : ' open') + '><summary>🗃 Unused — पुरानी फ़ाइलें (' + un.length + ')</summary>' + un.map(o => row(o.f, o.i)).join('') + '</details>' : '');
@@ -10963,7 +11073,7 @@ async function downloadParts(getPart, key, onProg) {
   const bytes = new Uint8Array(parts.reduce((s, x) => s + x.length, 0));
   let o = 0; parts.forEach(x => { bytes.set(x, o); o += x.length; });
   const f = { name: first.name, mime: first.mime, bytes, upd: first.updated || 0 };
-  await fileCachePut(key, f);
+  if (key) await fileCachePut(key, f);
   return f;
 }
 
