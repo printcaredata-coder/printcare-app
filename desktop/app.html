@@ -7106,7 +7106,7 @@ function iwDrawOff() {
         <div class="iw2-foot">${jr ? `<button class="btn primary" id="iwSave" onclick="offFlush().then(iwSave)"${dis}>💾 सेव</button>` : `<label class="cqf"><span>मात्रा (Qty)</span><input id="bkQ" inputmode="numeric" placeholder="जैसे 2000" oninput="offSumDraw();offQtyMem()"><span id="bkQm" class="bkqm"></span></label><label class="cqf wide"><span>नोट</span><input id="bkX" placeholder="ज़रूरी हो तो"></label><button class="btn primary bk-go" id="bkGo" onclick="offBook()">📝 ऑर्डर बुक करें</button>`}</div>
       </div>
       <div class="iw-right"><div class="iw2-card pv"><div class="iw2-pvh"><h4 id="iwRh">PDF प्रीव्यू</h4><span class="iw2-sp"></span><button class="btn sm" onclick="iwFull()">⛶ पूरी स्क्रीन</button><button class="btn sm" onclick="iwDl(0)">⬇ Download</button></div>
-        <div id="iwPrev" class="pdfhost iw-pv">${emptyArt('empty-files', 'किसी हिस्से की PDF पर क्लिक करें — यहाँ दिखेगी')}</div></div></div>
+        <div id="iwPrev" class="pdfhost iw-pv">${emptyArt('empty-files', 'किसी हिस्से की PDF पर क्लिक करें — यहाँ दिखेगी')}</div></div><div class="iw2-card" id="offAllR"><div id="offAll"></div></div></div>
     </div></div>`;
   if ($('offParts')) offDrawParts();
   offSumDraw();
@@ -7125,7 +7125,7 @@ function offXFDraw() {
     (can ? '<div class="off-fr"><span class="muted small">✂ बड़ी PDF का हर पेज = अलग हिस्सा (शीट)</span>' + (f && /\.pdf$/i.test(f.name || '') ? '<button type="button" class="btn sm" onclick="offSplitGo(\'prn\')">✂ ऊपर वाली फ़ाइल के पेज अलग करो</button>' : '') + '<label class="btn sm">✂ दूसरी PDF चुनो<input type="file" hidden accept=".pdf,.PDF" onchange="offSplitGo(\'pick\',this)"></label></div>' : '') +
     (cdr ? '<div class="off-cdr"><span class="muted small">🎨 पूरे प्रोडक्ट की CDR (अंजलि वाली)</span><div id="iwf_cdr">' + cdr + '</div></div>' : '') +
     (miss.length ? '<div class="off-miss">⚠ फ़ाइल बाकी: ' + miss.map(esc).join(' · ') + '</div>' : '<div class="off-ok">✅ सारी फ़ाइलें लगी हैं</div>') +
-    '<div id="offAll"></div>';
+    '';
   offAllLoad();
 }
 /* 📎 आइटम के फ़ोल्डर की सारी फ़ाइलें (ClapJoy आदि, मालिक 19-Nov): सर्वर से सूची, हर फ़ाइल Drive में खुले */
@@ -7156,8 +7156,23 @@ async function offAllLoad() {
     if (cc && cc.code === code && Date.now() - cc.at < 20000) L = cc.L; else { L = await api('apiItemFiles', S.token, code); S.offAllC = { code, at: Date.now(), L }; }
     const el = $('offAll'); if (!el || code !== S.wfItem) return;
     if (!L || !L.length) { el.innerHTML = ''; return; }
-    el.innerHTML = '<h4>📎 आइटम के फ़ोल्डर की सारी फ़ाइलें (' + L.length + ')</h4>' + L.map(f => '<div class="off-fr"><a class="iw-fn" href="' + esc(f.url) + '" target="_blank" rel="noopener">📄 ' + esc(f.name) + '</a><span class="muted small"> ' + (f.size >= 1048576 ? (Math.round(f.size / 104857.6) / 10) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB') + ' · ' + esc(f.at) + '</span></div>').join('');
+    S.offAllL = L;
+    /* 👁 दाईं तरफ़, क्लिक = ऐप के अंदर ही खुले (मालिक 20-Nov) */
+    el.innerHTML = '<h4>📎 आइटम के फ़ोल्डर की सारी फ़ाइलें (' + L.length + ')</h4>' + L.map((f, i) => '<div class="off-fr"><button type="button" class="iw-fn" onclick="itemFileShow(' + i + ')">' + (/.pdf$/i.test(f.name) ? '📄 ' : /.(cdr|ai)$/i.test(f.name) ? '🎨 ' : /.(zip|rar)$/i.test(f.name) ? '🗜 ' : '📎 ') + esc(f.name) + '</button><span class="muted small">' + (f.size / 1048576).toFixed(1) + ' MB · ' + esc(f.at || '') + '</span></div>').join('');
   } catch (e) { /* सूची न मिले तो चुप */ }
+}
+async function itemFileShow(i) {
+  const f = (S.offAllL || [])[i], box = $('iwPrev'), code = S.wfItem; if (!f || !box) return;
+  if ($('iwRh')) $('iwRh').innerHTML = '📎 <b>' + esc(f.name) + '</b>';
+  if (!/.(pdf|jpe?g|png|gif|webp|txt)$/i.test(f.name)) { box.innerHTML = emptyArt('empty-files', (/.(cdr|ai)$/i.test(f.name) ? '🎨 ' : '🗜 ') + esc(f.name) + ' — इसका प्रीव्यू ऐप में नहीं दिखता (' + (f.size / 1048576).toFixed(1) + ' MB)'); return; }
+  box.innerHTML = '<div class="progress" style="margin-top:8px"><div id="iwBar" class="progress-bar"></div><span id="iwPct">फाइल खुल रही है…</span></div>';
+  const prog = (g, t) => { if ($('iwBar') && t) { $('iwBar').style.width = Math.round(100 * g / t) + '%'; $('iwPct').textContent = (g / 1048576).toFixed(1) + ' / ' + (t / 1048576).toFixed(1) + ' MB'; } };
+  try {
+    const key = 'if_' + f.id + '_' + (f.size || ''), hit = await fileCacheGet(key);
+    const r = hit || await downloadParts((st, len) => api('apiItemFilePart', S.token, code, f.id, st, len), key, prog);
+    const F = { name: r.name || f.name, mime: r.mime, bytes: new Uint8Array(r.bytes), blob: new Blob([r.bytes], { type: r.mime }) };
+    if ($('iwPrev') && S.wfItem === code) { if (S.bk) S.bk.iwF = F; await renderFileInto($('iwPrev'), F); }
+  } catch (e) { if ($('iwPrev')) $('iwPrev').innerHTML = '<div class="empty">' + esc(e.message || 'फाइल नहीं खुली') + '</div>'; }
 }
 function offDrawParts() {
   const B = S.bk, el = $('offParts'); if (!el || !B || !B.offP) return;
