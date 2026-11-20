@@ -1826,7 +1826,7 @@
 .bk-t .bk-n{text-align:right;white-space:nowrap}.bk-t .bk-f{white-space:nowrap}.bk-t .bk-f .btn{margin-right:4px}
 .bk-nt{min-width:140px;max-width:260px}.bk-note{display:block;color:#a15c00;background:#fff4dc;border-radius:6px;padding:2px 6px;margin-bottom:3px;font-weight:600}
 .bk-in{display:flex;gap:6px;align-items:center}.bk-in input{width:92px;padding:6px 8px}
-.bk-left{color:#c2410c;font-size:17px}.bk-zero{color:#15803d;font-size:17px}.bk-done td{opacity:.62}
+.bk-nof{color:#b91c1c;background:#fee2e2;border-radius:6px;padding:3px 8px;font-weight:700;white-space:nowrap}.bk-left{color:#c2410c;font-size:17px}.bk-zero{color:#15803d;font-size:17px}.bk-done td{opacity:.62}
 </style>
 
 </head>
@@ -8648,6 +8648,8 @@ async function comboSave() {
 /* 📖 तारा जैसा यूज़र: सिर्फ बुक प्रिंटिंग टेबल — कोई होम / दूसरे पन्ने नहीं (मालिक 20-Nov) */
 function bkpOnly() { const u = S.user; return !!(u && !S.asUser && u.role !== 'Admin' && String(u.username || '').toLowerCase() !== 'bhavna' && bkpOk()); }
 function bkpOk() { const u = S.user; if (!u || S.asUser) return false; if (u.role === 'Admin' || String(u.username || '').toLowerCase() === 'bhavna') return true; return !!(S.procMeta && S.procMeta.see && !(S.tabs || []).length && !u.stock && !u.design); }
+/* हर 60 सेकंड में चुपचाप ताज़ा — फ़ाइल लगते ही ❌ की जगह ✅ आ जाए (मालिक 20-Nov) */
+if (!window.bkpTimer) window.bkpTimer = setInterval(async () => { if (S.view !== 'bkp' || !S.token || document.hidden) return; try { S.bkpD = await api('apiBkpData', S.token); if (S.view === 'bkp') drawBkp(); } catch (e) {} }, 60000);
 async function renderBkp() {
   const m = $('main'); if ($('pageTitle')) $('pageTitle').innerHTML = '📖 बुक प्रिंटिंग';
   S.bkp = S.bkp || { q: '', sh: 'all' };
@@ -8690,7 +8692,7 @@ function drawBkp() {
       ? '<span class="pst done">✅ पूरा</span>'
       : act ? '<div class="bk-in"><input id="bo_' + r.row + '" inputmode="numeric" placeholder="आज निकालीं" onkeydown="if(event.key===\'Enter\')bkpDone(' + r.row + ')"><button class="btn primary sm" onclick="bkpDone(' + r.row + ')">✅ Done</button></div>' : '<span class="muted small">👁 सिर्फ देखें</span>';
     return '<tr class="' + (r.left <= 0 ? 'bk-done' : '') + '"><td>' + esc(showDate(r.date)) + '</td><td><b>#' + esc(r.job) + '</b></td><td>' + esc(r.party) + '</td><td>' + esc(r.code) + '</td><td>' + esc(r.name) + '</td><td class="bk-n">' + fmtNum(r.qty) + '</td><td class="bk-nt">' + note + '</td>'
-      + '<td class="bk-f">' + bkpFileBtn(r.bw, 'B/W फ़ाइल', r, 'inner') + bkpFileBtn(r.color, 'कलर', r, 'color') + (!r.bw && !r.color ? '<span class="muted small">⚠ फ़ाइल नहीं लगी</span>' : '') + '</td><td>' + last + '</td>'
+      + '<td class="bk-f">' + (r.bw ? bkpFileBtn(r.bw, '✅ B/W फ़ाइल लगी', r, 'inner') : '<span class="bk-nof">❌ B/W फ़ाइल नहीं लगी</span>') + bkpFileBtn(r.color, '✅ कलर फ़ाइल लगी', r, 'color') + '</td><td>' + last + '</td>'
       + '<td class="bk-n"><b class="' + (r.left > 0 ? 'bk-left' : 'bk-zero') + '">' + fmtNum(r.left) + '</b><div class="muted small">निकलीं ' + fmtNum(r.out) + '</div></td></tr>';
   };
   m.innerHTML = '<div class="bkp"><div class="bk-h"><div class="seg">' + seg('all', 'सब', D.rows.length) + seg('open', '⏳ बाकी', nOpen) + seg('done', '✅ पूरे', D.rows.length - nOpen) + '</div>'
