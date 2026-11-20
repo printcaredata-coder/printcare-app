@@ -8649,12 +8649,16 @@ async function comboSave() {
 function bkpOnly() { const u = S.user; return !!(u && !S.asUser && u.role !== 'Admin' && String(u.username || '').toLowerCase() !== 'bhavna' && bkpOk()); }
 function bkpOk() { const u = S.user; if (!u || S.asUser) return false; if (u.role === 'Admin' || String(u.username || '').toLowerCase() === 'bhavna') return true; return !!(S.procMeta && S.procMeta.see && !(S.tabs || []).length && !u.stock && !u.design); }
 /* हर 60 सेकंड में चुपचाप ताज़ा — फ़ाइल लगते ही ❌ की जगह ✅ आ जाए (मालिक 20-Nov) */
-if (!window.bkpTimer) window.bkpTimer = setInterval(async () => { if (S.view !== 'bkp' || !S.token || document.hidden) return; try { S.bkpD = await api('apiBkpData', S.token); if (S.view === 'bkp') drawBkp(); } catch (e) {} }, 60000);
+if (!window.bkpTimer) window.bkpTimer = setInterval(async () => { if (S.view !== 'bkp' || !S.token || document.hidden) return; try { S.bkpD = await api('apiBkpData', S.token); bkpCacheSave(); if (S.view === 'bkp') drawBkp(); } catch (e) {} }, 60000);
+/* ⚡ पिछली बार का टेबल इसी कंप्यूटर की याद से तुरंत — पीछे से ताज़ा आए तो बदल जाए (मालिक 20-Nov: तारा का पैनल लोकल जैसा तेज़) */
+function bkpCKey() { return 'bkpC_' + String((S.user && S.user.username) || ''); }
+function bkpCacheSave() { try { if (S.bkpD) localStorage.setItem(bkpCKey(), JSON.stringify({ at: Date.now(), d: S.bkpD })); } catch (e) {} }
+function bkpCacheLoad() { try { const x = JSON.parse(localStorage.getItem(bkpCKey()) || 'null'); return x && x.d && x.d.rows ? x.d : null; } catch (e) { return null; } }
 async function renderBkp() {
-  const m = $('main'); if ($('pageTitle')) $('pageTitle').innerHTML = '📖 बुक प्रिंटिंग';
+  const m = $('main'); if (!S.bkpD) { const cd = bkpCacheLoad(); if (cd) S.bkpD = cd; } if ($('pageTitle')) $('pageTitle').innerHTML = '📖 बुक प्रिंटिंग';
   S.bkp = S.bkp || { q: '', sh: 'all' };
   if (S.bkpD) drawBkp(); else m.innerHTML = '<div class="loading">बुक प्रिंटिंग आ रही है…</div>';
-  try { const D = await api('apiBkpData', S.token); S.bkpD = D; if (S.view === 'bkp') drawBkp(); }
+  try { const D = await api('apiBkpData', S.token); S.bkpD = D; bkpCacheSave(); if (S.view === 'bkp') drawBkp(); }
   catch (e) { if (!S.bkpD) m.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; else toast('⚠ ' + e.message, true); }
 }
 function bkpFileBtn(f, lbl, r, slot) {
@@ -8736,7 +8740,7 @@ async function bkpDone(row) {
   try {
     const res = await api('apiDailyOut', S.token, row, q, false);
     r.out = res.out; r.left = res.left; r.status = res.status; r.today = (r.today || 0) + q;
-    toast(res.left <= 0 ? '🎉 #' + r.job + ' पूरा' : '✅ ' + fmtNum(q) + ' जोड़ीं — बाकी ' + fmtNum(res.left)); drawBkp();
+    toast(res.left <= 0 ? '🎉 #' + r.job + ' पूरा' : '✅ ' + fmtNum(q) + ' जोड़ीं — बाकी ' + fmtNum(res.left)); bkpCacheSave(); drawBkp();
   } catch (e) { fail(e); }
 }
 function bkpNote(job) {
