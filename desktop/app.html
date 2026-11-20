@@ -2446,6 +2446,7 @@ function onBack() {
     if (S.wfEdit && S.wfTouched && $('wfBox')) { askYes('🧮 बदलाव अभी सेव नहीं हुए — बिना सेव किए बंद करें?', 'हाँ, बंद करो').then(ok => { if (ok) closeModal(true); }); }
     else closeModal(true);
   }
+  else if (stepUp()) {}
   else if (S.navStk.length) {
     const p = S.navStk.pop(); S.navBack = 1;
     try { if (p.v === 'data' && p.t && (S.tabs || []).indexOf(p.t) >= 0) selectTab(S.tabs.indexOf(p.t)); else setView(p.v); } finally { S.navBack = 0; }
@@ -2453,6 +2454,12 @@ function onBack() {
   else if (S.view !== 'home') { S.navBack = 1; try { setView('home'); } finally { S.navBack = 0; } }
   else { exitAsk(); return; }
   backGuard();
+}
+/** ⌫ पेज के अंदर एक कदम ऊपर: 📁 आइटम → क्लाइंट → सारे क्लाइंट · खुला आइटम → सूची */
+function stepUp() {
+  if (S.view === 'files' && S.fs) { const F = S.fs; if (F.code) { fsGo(F.party); return true; } if (F.party) { fsGo(); return true; } }
+  if (S.bk && S.bk.code && !S.bk.modal && $('bkBody') && $('bkBody').innerHTML.trim()) { iwBack(); return true; }
+  return false;
 }
 function exitAsk() {
   const el = document.createElement('div'); el.className = 'effdlg exit-dlg';
@@ -9790,11 +9797,13 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key !== 'Backspace' || e.ctrlKey || e.altKey || e.metaKey) return;
   const a = document.activeElement || {}, t = (a.tagName || '').toUpperCase();
-  if (a.isContentEditable || t === 'TEXTAREA' || t === 'SELECT' || (t === 'INPUT' && !/^(checkbox|radio|button|submit|file|range|color)$/i.test(a.type || ''))) return;
-  e.preventDefault();
+  if (a.isContentEditable || t === 'TEXTAREA' || (t === 'INPUT' && !/^(checkbox|radio|button|submit|file|range|color)$/i.test(a.type || ''))) return;
+  e.preventDefault(); if (t === 'SELECT' && a.blur) a.blur();
   if ($('pmOver')) return closePaperMaster();
   if ($('pop')) return closePop();
-  if (modalOpen()) return wfGoBack();
+  /* ⌫ हर जगह एक ही कदम (मालिक 20-Nov): खिड़की के अंदर पीछे की जगह हो तो वहाँ, नहीं तो सिर्फ यही खिड़की बंद */
+  if (modalOpen()) { if ((S.wfBack || []).some(b => document.body.contains(b.box))) return wfGoBack(); return onBack(); }
+  if (stepUp()) return;
   /* ⌫ एक कदम पीछे (मालिक 20-Nov): जहाँ से खोला था वहीं — शीट में खाना चुना हो तो Backspace खाना साफ़ करता है (पहले जैसा) */
   const dl = document.querySelectorAll('.effdlg'); if (dl.length) { dl[dl.length - 1].remove(); return; }
   if (document.querySelector('.scroll td.cell-on') || (S.rng && S.rng.row)) return;
