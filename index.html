@@ -24,6 +24,9 @@
           background: linear-gradient(135deg, #4f7bff, #1e3a8a); color: #fff; font: 600 14px "Segoe UI", Roboto, sans-serif;
           box-shadow: 0 4px 14px rgba(0, 0, 0, .25); cursor: pointer; }
   #inst span { margin-left: 8px; opacity: .8; }
+  #dsk { position: fixed; right: 12px; bottom: 16px; z-index: 3; display: none; border-radius: 22px; padding: 10px 16px; background: #1f3a93; color: #fff; text-decoration: none;
+    font: 600 14px system-ui, sans-serif; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+  #dsk small { opacity: .8; font-weight: 400; }
   #ntf { position: fixed; left: 12px; bottom: 76px; z-index: 3; display: none; border: 0; border-radius: 22px; padding: 10px 16px; background: #fff; color: #1e3a8a; font: 600 14px "Segoe UI", Roboto, sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); cursor: pointer; }
   #ntf span { margin-left: 8px; color: #888; }
   /* 🟦 इंस्टॉल ऐप की ऊपर वाली नीली पट्टी (window-controls-overlay): नाम · 🔔 · हिंदी/English · लॉगआउट (मालिक 19-Nov) */
@@ -46,6 +49,7 @@
 <iframe id="app" title="Print Care" allow="camera; microphone; clipboard-read; clipboard-write; fullscreen; geolocation"></iframe>
 <button id="ntf" type="button">🔔 सूचना चालू करें <span id="ntfX">✕</span></button>
 <button id="inst" type="button">📲 Print Care इंस्टॉल करें <span id="instX">✕</span></button>
+<a id="dsk" href="desktop/PrintCare-Setup.exe" download="PrintCare-Setup.exe" title="Windows कंप्यूटर के लिए Print Care सॉफ़्टवेयर">🖥 कंप्यूटर सॉफ़्टवेयर डाउनलोड करें <small>(Windows)</small></a>
 <script>
   /* Print Care ऐप-पेज: असली ऐप (Google Apps Script) इसी पेज के अंदर खुलता है — इससे Google वाली पट्टी नहीं आती,
      और ये पेज फ़ोन / कंप्यूटर पर "Install" होकर अपना ऐप बन जाता है। पासवर्ड वाला लिंक (?i=कोड) अंदर तक जाता है। */
@@ -64,6 +68,10 @@
   var hidden = false; try { hidden = localStorage.getItem('pc_inst_hide') === '1'; } catch (e) {}
   /* मालिक 19-Nov: पहले लॉगिन, फिर इंस्टॉल — चिप तभी दिखे जब ऐप ने लॉगिन बताया (pc:loggedIn); दबाने पर पहले डाटा उतरे (ऐप का appInstall), फिर Install */
   var loginOk = false;
+  /* 🖥 मालिक 20-Nov: app.priniva.in खोलो → यहीं से सॉफ़्टवेयर सीधा डाउनलोड → उसमें अपना लॉगिन → अपना डाटा। लॉगिन पेज पर ही दिखे (कंप्यूटर पर) */
+  var dsk = document.getElementById('dsk'), isPhone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  function dskShow(on) { dsk.style.display = on && !isPhone ? 'block' : 'none'; }
+  dskShow(true);
   function showChip() { if (loginOk && deferred && !standalone && !hidden) btn.style.display = 'block'; }
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault(); deferred = e; showChip();
@@ -82,9 +90,9 @@
       document.title = (n ? '(' + n + ') ' : '') + 'Print Care';
       try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (x) {}
     } else if (m.pc === 'loggedIn') {
-      loginOk = true; showChip();
+      loginOk = true; showChip(); dskShow(false);
     } else if (m.pc === 'loggedOut') {
-      loginOk = false; btn.style.display = 'none';
+      loginOk = false; btn.style.display = 'none'; dskShow(true);
     } else if (m.pc === 'instQ') {   /* 📲 लॉगिन पेज: ऐप पहले से इंस्टॉल है? */
       try { e.source.postMessage({ pc: 'instState', on: standalone || (navigator.windowControlsOverlay && navigator.windowControlsOverlay.visible) || false }, o); } catch (x) {}
     } else if (m.pc === 'install') {

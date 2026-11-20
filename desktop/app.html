@@ -1815,6 +1815,8 @@
 .fs-da{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
 .fs-dl{display:inline-flex;gap:6px;align-items:center}.fs-dl span{font-size:12px;color:var(--muted,#667)}
 .fs-ifn{display:inline-flex;align-items:center;gap:6px}
+.sw-bar{position:fixed;left:50%;transform:translateX(-50%);top:10px;z-index:9999;display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:min(900px,94vw);background:#fff8e1;border:1px solid #f0c36d;border-radius:10px;padding:10px 14px;box-shadow:0 6px 24px rgba(0,0,0,.15);font-size:14px}
+.sw-bar span{flex:1 1 300px;color:#5b4a1e}
 </style>
 
 </head>
@@ -2431,7 +2433,7 @@ function drawNav() {
     mobItems().filter(x => x.k !== 'settings').map(x => item(x.k.indexOf('tab:') === 0 ? S.view === 'data' && S.tab === x.k.slice(4) : S.view === x.k, String(x.ic).indexOf('<') === 0 || String(x.ic).length > 4 ? x.ic : '<span class="nav-emo">' + x.ic + '</span>', x.k === 'stock' ? 'स्टॉक नोट' : x.t, x.go)).join('') +
     (S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna') ? item(false, '<span class="nav-emo">🕘</span>', 'हाज़िरी', 'attOpen()') : '') +
     (fsCan() ? item(S.view === 'files', '<span class="nav-emo">📁</span>', 'सारे क्लाइंट', "setView('files')") : '') +
-    '<div class="side-gap"></div>' + (S.user && S.user.simple ? '' :
+    '<div class="side-gap"></div>' + (setTimeout(swNag, 3000), '') + (S.user && S.user.simple ? '' :
     item(S.view === 'settings' || S.view === 'users', navIc('icon-settings', '⚙️'), 'ऐप सेटिंग', "setView('settings')"));
   const titles = { files: '📁 सारे क्लाइंट', home: '🏠 होम', settings: '⚙️ ऐप सेटिंग', users: '👥 यूज़र और परमिशन', prod: '🏭 प्रोडक्शन — आज क्या बाकी', buy: '🧾 Workflow — खरीद / बाहर / घर', rates: '📒 रेट मास्टर — हर काम का रेट एक जगह', stock: '📦 स्टॉक नोट — तारा फैक्ट्री' };
   if ($('pageTitle') && !(S.view === 'data' && $('pageTitle').querySelector('#tb2'))) $('pageTitle').innerHTML = S.view === 'data' ? tabIcon(S.tab) + ' ' + esc(S.tab) : (titles[S.view] || '');
@@ -7386,6 +7388,7 @@ async function fsWebDl(i) {
 S.fsUpQ = S.fsUpQ || {};
 async function fsLocSync(meta) {
   if (!meta || !meta.id || S.fsUpQ[meta.id] || !S.token) return;
+  if (S.user && S.user.design && S.user.role !== 'Admin') { if (!S.fsNoSyncT) { S.fsNoSyncT = 1; toast('💻 ' + meta.name + ' — बदलाव सिर्फ इस कंप्यूटर में रहेगा (Drive की असली फ़ाइल नहीं बदलती)'); } return; }
   S.fsUpQ[meta.id] = 1;
   try {
     const b = await window.pcDesk.fileRead(meta.id); if (!b) throw new Error('फ़ाइल नहीं पढ़ी गई');
@@ -7456,6 +7459,37 @@ document.addEventListener('paste', e => {
   const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
   const fl = e.clipboardData && e.clipboardData.files; if (fl && fl.length) { e.preventDefault(); fsUpFiles(fl); }
 });
+/* 🖥 Print Care सॉफ़्टवेयर (मालिक 20-Nov): डाउनलोड लिंक ऐप के अंदर ही — ढूँढना नहीं पड़े; 1.0.5 से सॉफ़्टवेयर अपने-आप अपडेट */
+const DESK_LATEST = '1.0.5';
+async function swLinks() { if (S.swL && S.swL.exe) return S.swL; try { S.swL = await api('apiSoftwareLinks'); } catch (e) { S.swL = {}; } return S.swL; }
+const SW_SITE = 'https:' + String.fromCharCode(47, 47) + 'app.priniva.in';
+async function swGet(kind) { const L = kind === 'zip' ? await swLinks() : {}, u = kind === 'zip' ? L.zip : SW_SITE + '/desktop/PrintCare-Setup.exe'; if (!u) return toast('लिंक नहीं मिला — थोड़ी देर बाद फिर', true); window.open(u, '_blank'); toast('⬇ डाउनलोड शुरू — पूरा होने पर उसे चलाएँ'); }
+async function swShare() {
+  openModal('🖥 Print Care सॉफ़्टवेयर — दूसरे कंप्यूटर पर', '<div class="small">दूसरे कंप्यूटर (भावना / अंजलि / आपका दूसरा PC) पर Chrome में यह खोलें:</div><input id="swLk" readonly style="width:100%;margin:8px 0;font-size:16px" value="app.priniva.in" onclick="this.select()">' +
+    '<div class="small">वहाँ दाईं तरफ़ नीचे <b>🖥 कंप्यूटर सॉफ़्टवेयर डाउनलोड करें</b> दबाएँ → डाउनलोड हुई <b>PrintCare-Setup.exe</b> चलाएँ → डाटा की ड्राइव चुनें → अपना लॉगिन करें — उसी यूज़र का डाटा उतर आएगा। इसमें व्यापार का कोई डाटा नहीं (डाटा लॉगिन के बाद आता है)।</div>' +
+    '<div class="actions"><button class="btn primary" onclick="try{navigator.clipboard.writeText($(\'swLk\').value);toast(\'📋 लिंक कॉपी\')}catch(e){$(\'swLk\').select()}">📋 कॉपी</button></div>');
+}
+async function swInfo() { try { return window.pcDesk && window.pcDesk.ver ? await window.pcDesk.ver() : null; } catch (e) { return null; } }
+function swOld() { return !!(window.pcDesk && !window.pcDesk.ver); }
+function swCard() {
+  if (isMob()) return '';
+  const desk = !!window.pcDesk;
+  const txt = desk ? (swOld() ? '⚠ इस कंप्यूटर पर पुराना वर्ज़न है — नया एक बार डालें (डाटा / लॉगिन वैसे ही रहेंगे), फिर आगे से <b>अपने-आप अपडेट</b> होगा।' : '<span id="swVer">✅ नया वर्ज़न — आगे से अपने-आप अपडेट होता है</span>')
+    : 'कंप्यूटर पर Print Care का अपना सॉफ़्टवेयर — बिना Chrome, डाटा अपनी ड्राइव पर, फ़ाइलें कंप्यूटर में + Drive से सिंक।';
+  return '<div class="card set-card"><div class="set-ic">🖥</div><div class="set-body"><h3>Print Care सॉफ़्टवेयर (कंप्यूटर के लिए)</h3><div class="muted small">' + txt + '</div><div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">' +
+    (desk && !swOld() ? '' : '<button class="btn primary" onclick="swGet(\'exe\')">⬇ Setup डाउनलोड</button><button class="btn" onclick="swGet(\'zip\')">⬇ ZIP (बिना इंस्टॉल)</button>') +
+    '<button class="btn" onclick="swShare()">🔗 दूसरे कंप्यूटर के लिए लिंक</button></div></div></div>';
+}
+/* पुराने डेस्कटॉप वर्ज़न पर एक बार पट्टी: नया डालो (फिर कभी नहीं) */
+function swNag() {
+  if (S.swNagged || !swOld() || !S.user) return; S.swNagged = 1;
+  try { if (Date.now() - Number(localStorage.getItem('pc_swNag') || 0) < 8 * 3600000) return; localStorage.setItem('pc_swNag', String(Date.now())); } catch (e) {}
+  const d = document.createElement('div'); d.className = 'sw-bar';
+  d.innerHTML = '<b>🆕 Print Care सॉफ़्टवेयर का नया वर्ज़न</b><span>एक बार डालें — डाटा / लॉगिन वैसे ही रहेंगे, और आगे से अपने-आप अपडेट होगा (लिंक ढूँढना नहीं पड़ेगा)।</span><button class="btn sm primary">⬇ अभी डाउनलोड</button><button class="btn sm">बाद में</button>';
+  const b = d.querySelectorAll('button'); b[0].onclick = () => { swGet('exe'); d.remove(); }; b[1].onclick = () => d.remove();
+  document.body.appendChild(d);
+}
+try { if (window.pcDesk && window.pcDesk.onUpdReady) window.pcDesk.onUpdReady(v => savedNote('🆕 नया सॉफ़्टवेयर ' + v + ' तैयार — अगली बार खोलने पर अपने-आप लग जाएगा')); } catch (e) {}
 /* 🔍 Ctrl+F हर जगह (मालिक 20-Nov, "जैसे कोरल में"): उस पेज का खोज-डिब्बा; न हो तो पूरी ऐप में खोजो (पेज / Job Register / Order Booking…) */
 function ctrlFind() {
   S.cfOpen = true;
@@ -9527,7 +9561,8 @@ function renderSettings() {
     ${admin ? card('🔤', 'पार्टी नाम ठीक करें', 'एक ही पार्टी अलग-अलग स्पेलिंग में लिखी है? सब एक जगह देखें, सही नाम चुनें, OK — सब एक हो जाएँगे (सिर्फ PARTY NAME)।', '<button class="btn primary" onclick="openParties()">खोलें</button>') : ''}
     ${card('💾', 'डेटा और फाइलों की याद', 'कितने दिन की फाइलें कंप्यूटर में, कितनी जगह, अंदाज़ा, याद साफ़ करें।' + (admin ? ' (सबके लिए नियम यहीं से)' : ''), '<button class="btn" data-pop onclick="cacheSettings(this)">खोलें</button>')}
     ${card('🎨', 'हेडर का रंग', 'अपनी पसंद का रंग चुनें या खुद बनाएँ।', '<button class="btn" data-pop onclick="colorPicker(this)">रंग चुनें</button>')}
-    ${isMob() ? '' : isInstalledApp() ? card('💻', 'डेस्कटॉप ऐप', 'ये ऐप इस कंप्यूटर पर इंस्टॉल है ✔', '') : card('💻', 'डेस्कटॉप ऐप', 'कंप्यूटर पर Print Care आइकन बनाएँ और डेटा रखने की जगह खुद चुनें।', '<button class="btn" onclick="downloadInstaller()">इंस्टॉल फाइल लें</button>')}
+    ${swCard()}
+    ${window.pcDesk || isMob() ? '' : isInstalledApp() ? card('💻', 'डेस्कटॉप ऐप', 'ये ऐप इस कंप्यूटर पर इंस्टॉल है ✔', '') : card('💻', 'डेस्कटॉप ऐप', 'कंप्यूटर पर Print Care आइकन बनाएँ और डेटा रखने की जगह खुद चुनें।', '<button class="btn" onclick="downloadInstaller()">इंस्टॉल फाइल लें</button>')}
     ${admin ? card('⏱', 'रफ़्तार नापो', 'ऐप कहाँ धीमा है — सर्वर पर हर हिस्से का समय और इस कंप्यूटर पर हर काम का समय। सिर्फ पढ़ता है।', '<button class="btn" onclick="perfRun()">⏱ नापो</button>') : ''}
     ${card('🔑', 'मेरा पासवर्ड', 'अपना पासवर्ड बदलें।', '<button class="btn" onclick="changePwDialog()">पासवर्ड बदलें</button>')}
     ${card('🔄', 'ताज़ा डेटा', 'अभी के अभी शीट से सब कुछ नए सिरे से लाएँ।', '<button class="btn" onclick="S.full=null;IDB.clear();toast(\'याद साफ़ — ताज़ा डेटा आ रहा है\');setView(\'home\')">सब ताज़ा करें</button>')}
