@@ -1797,6 +1797,19 @@
 .fs-rows{display:flex;flex-direction:column;gap:4px}
 .fs-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line,#e3e3ea);border-radius:8px;background:var(--card,#fff);cursor:default}
 .fs-row.sel{border-color:var(--brand,#1f6feb);box-shadow:0 0 0 2px rgba(31,111,235,.15)}
+.zd-hd,.zd-row{display:grid;grid-template-columns:minmax(180px,1fr) 150px 110px 90px 150px;gap:8px;align-items:center}
+.zd-hd{padding:4px 8px;border-bottom:1px solid var(--line,#e3e3ea);margin-bottom:4px;position:sticky;top:0;background:var(--bg,#fff);z-index:2}
+.zd-th{background:none;border:0;text-align:left;font-weight:600;font-size:12px;color:var(--muted,#667);cursor:pointer;padding:2px 0}
+.zd-th.on{color:var(--brand,#1f6feb)}
+.zd-row{padding:3px 8px;user-select:none}
+.zd-row .zd-n{display:flex;align-items:center;gap:6px;min-width:0}
+.zd-row .zd-n .fs-nm{flex:1 1 auto}
+.zd-row .zd-s{text-align:right}
+.zd-row .zd-b{display:flex;gap:4px;justify-content:flex-end;opacity:.0}
+.zd-row:hover .zd-b,.zd-row.sel .zd-b{opacity:1}
+.zd-row:hover{background:rgba(31,111,235,.06)}
+.zd-ft{margin-top:8px}
+@media(max-width:760px){.zd-hd{display:none}.zd-row{grid-template-columns:1fr auto}.zd-row .zd-c{display:none}.zd-row .zd-b{opacity:1}}
 .fs-nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 220px;text-align:left}
 .fs-ok{font-size:16px}.fs-who{max-width:190px}.fs-act{display:inline-flex;gap:4px;margin-left:auto}
 .fs-pv{position:sticky;top:8px;align-self:start}
@@ -2299,7 +2312,7 @@ function tabIcon(t) { const k = String(t).toLowerCase(), n = TAB_ART[k]; return 
 function navSave() {
   if (!S.user) return;
   const q = sel => { const e = document.querySelector(sel); return e ? [e.scrollTop, e.scrollLeft] : null; };
-  const nav = { as: S.asUser || '', fs: S.view === 'files' ? { party: (S.fs || {}).party || '', code: (S.fs || {}).code || '', mode: (S.fs || {}).mode || 'used', zf: S.zf ? { mode: S.zf.mode, path: S.zf.path, q: S.zf.q, by: S.zf.by, ip: S.zf.ip } : null } : null, bkp: S.view === 'bkp' && S.bkp ? { q: S.bkp.q || '', sh: S.bkp.sh || 'all', cf: S.bkp.cf || {} } : null, view: S.view, tab: S.tab, page: S.q.page, search: S.q.search || '', r: S.navRow || null, kind: S.navKind || '',
+  const nav = { as: S.asUser || '', zd: S.view === 'zdrive' && S.zd ? { path: S.zd.path, q: S.zd.q || '', sort: S.zd.sort, asc: S.zd.asc } : null, fs: S.view === 'files' ? { party: (S.fs || {}).party || '', code: (S.fs || {}).code || '', mode: (S.fs || {}).mode || 'used', zf: S.zf ? { mode: S.zf.mode, path: S.zf.path, q: S.zf.q, by: S.zf.by, ip: S.zf.ip } : null } : null, bkp: S.view === 'bkp' && S.bkp ? { q: S.bkp.q || '', sh: S.bkp.sh || 'all', cf: S.bkp.cf || {} } : null, view: S.view, tab: S.tab, page: S.q.page, search: S.q.search || '', r: S.navRow || null, kind: S.navKind || '',
     md: S.navModal || '', bu: S.view === 'buy' && S.buyUi ? S.buyUi : null,
     iw: S.bk && S.bk.code && document.querySelector('#bkBody .iw2') ? { code: S.bk.code, party: S.bk.party || '', mode: S.bk.mode || '', modal: !!S.bk.modal } : null,
     co: S.calcOpen && S.navRow ? Object.keys(S.calcOpen).filter(k => S.calcOpen[k]) : [], qty: S.calcQty || '',
@@ -2355,6 +2368,7 @@ function navRestore() {
   try { nav = JSON.parse(sessionStorage.getItem('pc_nav') || 'null'); } catch (e) {}
   if (!nav || Date.now() - (nav.at || 0) > 12 * 3600e3) return setView('home');
   if (nav.as && S.asUser !== nav.as && !S.asUser && S.user && S.user.role === 'Admin') { panelAs(nav.as); return; }   /* किसी का पैनल देख रहे थे → वही पैनल, फिर वही जगह */
+  if (nav.view === 'zdrive' && nav.zd) { S.zd = Object.assign(zdSt(), nav.zd, { sel: -1, ents: null }); setView('zdrive'); navWait(() => $('main') && $('zdPage'), () => setTimeout(() => navScroll(nav.sc, ['doc', 'main']), 300), 15000); return; }
   if (nav.view === 'files' && nav.fs) { if (nav.fs.zf) S.zf = Object.assign({ mode: 'used', path: [], q: '', sel: -1, by: 'fold', ip: [] }, nav.fs.zf); S.fs = fsSt(); Object.assign(S.fs, { party: nav.fs.party || '', code: nav.fs.code || '', mode: nav.fs.mode || 'used' }); setView('files'); navWait(() => $('main') && ($('fsPage') || $('zfsPage')), () => setTimeout(() => navScroll(nav.sc, ['doc', 'main']), 400), 15000); return; }
   if (nav.view === 'bkp') { S.bkp = Object.assign({ q: '', sh: 'all' }, nav.bkp || {}); setView('bkp'); navWait(() => $('main') && document.querySelector('.bk-w'), () => navScroll(nav.sc, ['doc', 'main', 'bk']), 20000); return; }
   if (['sjr', 'sob', 'stock', 'pw'].indexOf(nav.view) >= 0) { setView(nav.view); navReIw(nav); return; }
@@ -2445,10 +2459,10 @@ function drawNav() {
   n.innerHTML = `<div class="side-logo">${logo(36)}<span class="si-tx">${WS === 'cj' ? '🧸 <b>ClapJoy</b>' : 'Print <b>Care</b>'}</span></div>` +
     mobItems().filter(x => x.k !== 'settings').map(x => item(x.k.indexOf('tab:') === 0 ? S.view === 'data' && S.tab === x.k.slice(4) : S.view === x.k, String(x.ic).indexOf('<') === 0 || String(x.ic).length > 4 ? x.ic : '<span class="nav-emo">' + x.ic + '</span>', x.k === 'stock' ? 'स्टॉक नोट' : x.t, x.go)).join('') +
     (S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna') ? item(false, '<span class="nav-emo">🕘</span>', 'हाज़िरी', 'attOpen()') : '') +
-    (fsCan() && !bkpOnly() ? item(S.view === 'files', '<span class="nav-emo">📁</span>', 'सारे क्लाइंट', "setView('files')") : '') +
+    (zdOn() ? item(S.view === 'zdrive', '<span class="nav-emo">🗂</span>', 'Z: ड्राइव', "setView('zdrive')") : fsCan() && !bkpOnly() ? item(S.view === 'files', '<span class="nav-emo">📁</span>', 'सारे क्लाइंट', "setView('files')") : '') +
     '<div class="side-gap"></div>' + (setTimeout(swNag, 3000), setTimeout(taraSyncStart, 3000), '') + (S.user && (S.user.simple || bkpOnly()) ? '' :
     item(S.view === 'settings' || S.view === 'users', navIc('icon-settings', '⚙️'), 'ऐप सेटिंग', "setView('settings')"));
-  const titles = { files: '📁 सारे क्लाइंट', home: '🏠 होम', settings: '⚙️ ऐप सेटिंग', users: '👥 यूज़र और परमिशन', prod: '🏭 प्रोडक्शन — आज क्या बाकी', buy: '🧾 Workflow — खरीद / बाहर / घर', rates: '📒 रेट मास्टर — हर काम का रेट एक जगह', stock: '📦 स्टॉक नोट — तारा फैक्ट्री' };
+  const titles = { files: '📁 सारे क्लाइंट', zdrive: '🗂 Z: ड्राइव', home: '🏠 होम', settings: '⚙️ ऐप सेटिंग', users: '👥 यूज़र और परमिशन', prod: '🏭 प्रोडक्शन — आज क्या बाकी', buy: '🧾 Workflow — खरीद / बाहर / घर', rates: '📒 रेट मास्टर — हर काम का रेट एक जगह', stock: '📦 स्टॉक नोट — तारा फैक्ट्री' };
   if ($('pageTitle') && !(S.view === 'data' && $('pageTitle').querySelector('#tb2'))) $('pageTitle').innerHTML = S.view === 'data' ? tabIcon(S.tab) + ' ' + esc(S.tab) : (titles[S.view] || '');
   { const tb = $('topBack'); if (tb) tb.style.display = (S.view === 'home' && !(S.bk && S.bk.code) && !modalOpen()) ? 'none' : ''; }
   drawMobNav(); drawBell();
@@ -2486,6 +2500,7 @@ function onBack() {
 }
 /** ⌫ पेज के अंदर एक कदम ऊपर: 📁 आइटम → क्लाइंट → सारे क्लाइंट · खुला आइटम → सूची */
 function stepUp() {
+  if (S.view === 'zdrive') { const Z = zdSt(); if (Z.q) { Z.q = ''; zdDraw(); return true; } if (zdUp()) return true; }
   if (S.view === 'files' && zfsOn()) { const Z = zfsSt(); if (Z.q) { Z.q = ''; zfsDraw(); return true; } if (Z.by === 'item') { if ((Z.ip || []).length) { Z.ip.pop(); zfsDraw(); return true; } } else if ((Z.path || []).length) { Z.path.pop(); Z.sel = -1; zfsDraw(); return true; } }
   if (S.view === 'files' && S.fs) { const F = S.fs; if (F.code) { fsGo(F.party); return true; } if (F.party) { fsGo(); return true; } }
   if (S.bk && S.bk.code && !S.bk.modal && $('bkBody') && $('bkBody').innerHTML.trim()) { iwBack(); return true; }
@@ -2509,7 +2524,9 @@ async function setView(v) {
   S.view = v; if (v !== 'data' && $('xlTabs')) $('xlTabs').remove();
   closePop();
   drawNav();
-  if (v === 'files') return renderFs();
+  if (v === 'zdrive' && !zdOn()) v = 'files';
+  if (v === 'zdrive') return renderZd();
+  if (v === 'files') return zdOn() ? (S.view = 'zdrive', renderZd()) : renderFs();
   if (S.user && S.user.simple) {
     if (!(v === 'buy' || (v === 'data' && (S.tabs || []).indexOf(S.tab) >= 0))) {   /* Workflow / Billing — सिर्फ नए ऑर्डर (सर्वर छाँटता है) */
       if (['home', 'sjr', 'sob', 'pw', 'bkp'].indexOf(v) < 0) v = 'home';
@@ -3092,7 +3109,7 @@ async function renderHome() {
       <div class="hh-sub">Print Care — आज का पूरा काम एक नज़र में</div></div></div>
     ${pcWho() ? '<div class="pc-home">' + pcSetupBtn() + '<span class="muted small">फाइलें सीधे कंप्यूटर में खोलने के लिए — एक बार</span></div>' : ''}
     ${mobHomeTop()}
-    <div class="home3">${bkpOk() ? '<button class="h3c" onclick="setView(\'bkp\')"><b>📖 तारा का बुक प्रिंटिंग</b><small>तारा जो देखती है वही, लाइव — कितना निकला, कितना बाकी</small></button>' : ''}${(S.user.design ? [] : BUY_PAGES).map(p => `<button class="h3c" onclick="buyOpen('${p[0]}')"><b>${p[1]}</b><small>${p[2]}</small></button>`).join('')}${S.user.stock ? '<button class="h3c" onclick="setView(\'stock\')"><b>📦 स्टॉक नोट</b><small>तारा फैक्ट्री से आए फोटो + नोट</small></button>' : ''}<button class="h3c later" onclick="openLater()"><b>⏳ रेट बाकी</b><small>जिन आइटम में काम टिक है पर रेट बाद में भरना है</small></button></div>
+    <div class="home3">${zdOn() ? '<button class="h3c" onclick="setView(\'zdrive\')"><b>🗂 Z: ड्राइव</b><small>कंप्यूटर के ड्राइव जैसा — सारे फ़ोल्डर और फ़ाइलें वैसी ही जैसी रखी हैं</small></button>' : ''}${bkpOk() ? '<button class="h3c" onclick="setView(\'bkp\')"><b>📖 तारा का बुक प्रिंटिंग</b><small>तारा जो देखती है वही, लाइव — कितना निकला, कितना बाकी</small></button>' : ''}${(S.user.design ? [] : BUY_PAGES).map(p => `<button class="h3c" onclick="buyOpen('${p[0]}')"><b>${p[1]}</b><small>${p[2]}</small></button>`).join('')}${S.user.stock ? '<button class="h3c" onclick="setView(\'stock\')"><b>📦 स्टॉक नोट</b><small>तारा फैक्ट्री से आए फोटो + नोट</small></button>' : ''}<button class="h3c later" onclick="openLater()"><b>⏳ रेट बाकी</b><small>जिन आइटम में काम टिक है पर रेट बाद में भरना है</small></button></div>
     <div class="kpis" id="kpis">${S.tabs.map(t => `<div class="kpi skel"><div class="k-ic">${tabIcon(t)}</div><div><div class="k-t">${esc(t)}</div><div class="k-n">…</div></div></div>`).join('')}</div>
     <div class="home-grid"><div class="card"><h3>🕘 हाल की एंट्री</h3><div id="recent" class="loading small">लोड हो रहा है…</div></div>
       <div class="card"><h3>⚡ जल्दी जाएँ</h3><div class="quick">${S.tabs.map((t, i) => `<button class="btn" onclick="selectTab(${i})">${tabIcon(t)} ${esc(t)}</button>`).join('')}
@@ -4932,6 +4949,7 @@ function allLaunch() {
   const it = mobItems().filter(x => x.k !== 'home');
   if (S.procMeta && S.procMeta.see && !(S.user && S.user.design)) (typeof BUY_PAGES !== 'undefined' ? BUY_PAGES : []).forEach(p => it.push({ k: 'bp:' + p[0], ic: String(p[1]).split(' ')[0], t: String(p[1]).replace(/^\S+\s/, ''), go: "buyOpen('" + p[0] + "')" }));
   if (S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna')) it.push({ k: 'att', ic: '🕘', t: 'हाज़िरी', go: 'attOpen()' });
+  if (zdOn()) it.push({ k: 'zdrive', ic: '🗂', t: 'Z: ड्राइव', go: "setView('zdrive')" });
   it.push({ k: 'install', ic: '📲', t: 'ऐप इंस्टॉल करें', go: 'appInstall()' });
   if (S.user && S.user.role === 'Admin' && !S.asUser) it.push({ k: 'rr', ic: '📂', t: 'Review Required', go: 'openRR()' });
   if (pcWho()) it.push({ k: 'pcsetup', ic: '🖥', t: 'कंप्यूटर सेटअप', go: 'pcSetupDlg()' });
@@ -7412,6 +7430,90 @@ async function zfsView(i) {
     if ($('fvPct')) $('fvPct').textContent = 'तैयार ✓';
   } catch (er) { if ($('fvBody')) $('fvBody').innerHTML = '<div class="empty">' + esc(er.message || er) + '</div>'; if ($('fvPct')) $('fvPct').textContent = '✗'; }
 }
+/* 🗂 Z: ड्राइव (मालिक 21-Nov, सॉफ़्टवेयर 1.0.8): कंप्यूटर के ड्राइव जैसा — Z:\ का हर फ़ोल्डर / फ़ाइल वैसी ही जैसी रखी है. सिर्फ़ देखना / खोलना (हटाना / नाम बदलना नहीं).
+   नितिन + भावना को पूरा Z:, बाकी (अंजलि) को सिर्फ़ ALL CLIENT */
+function zdOn() { return !!(window.PC_DESK && window.pcDesk && window.pcDesk.zDir && fsCan() && !bkpOnly()); }
+function zdFull() { return !!(S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna')); }
+function zdSt() { return S.zd || (S.zd = { path: [], q: '', sort: 'n', asc: true, sel: -1, ents: null }); }
+function zdMin() { return zdFull() ? 0 : 1; }
+function zdFmt(n) { return n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B'; }
+function zdIco(n, d) { return d ? '📁' : /\.pdf$/i.test(n) ? '📕' : /\.(cdr|ai|psd|eps)$/i.test(n) ? '🎨' : /\.(jpe?g|png|gif|tif+|bmp|webp)$/i.test(n) ? '🖼' : /\.(xlsx?|csv)$/i.test(n) ? '📊' : /\.(docx?|txt)$/i.test(n) ? '📝' : /\.(zip|rar|7z)$/i.test(n) ? '🗜' : /\.exe$/i.test(n) ? '⚙️' : '📄'; }
+function zdType(n, d) { if (d) return 'फ़ोल्डर'; const m = n.match(/\.([a-z0-9]+)$/i); return m ? m[1].toUpperCase() + ' फ़ाइल' : 'फ़ाइल'; }
+function zdDt(s) { const x = new Date(s * 1000), p = v => String(v).padStart(2, '0'); return p(x.getDate()) + '-' + p(x.getMonth() + 1) + '-' + x.getFullYear() + ' ' + p(x.getHours()) + ':' + p(x.getMinutes()); }
+async function renderZd(silent) {
+  const m = $('main'); S.view = 'zdrive'; if ($('pageTitle')) $('pageTitle').innerHTML = '🗂 Z: ड्राइव';
+  const Z = zdSt(); if (Z.path.length < zdMin()) Z.path = ['ALL CLIENT'];
+  if (!silent) m.innerHTML = '<div class="loading">Z: खुल रही है…</div>';
+  try {
+    const r = await window.pcDesk.zDir(Z.path.join('/'));
+    if (S.view !== 'zdrive') return;
+    const sig = r.ents.length + '|' + r.ents.reduce((a, e) => a + e.m + e.s, 0);
+    if (silent && Z.sig === sig && Z.ents) return;
+    Z.sig = sig; Z.ents = r.ents; Z.base = r.base;
+  } catch (e) {
+    if (silent) return;
+    Z.ents = null; m.innerHTML = '<div class="empty">⚠ ' + esc(e.message || e) + '<br><br><button class="btn sm" onclick="zdGo(-1)">🗂 Z: के ऊपर चलो</button> <button class="btn sm" onclick="renderZd()">🔄 फिर देखो</button></div>'; return;
+  }
+  zdDraw();
+  if (!S.zdTm) S.zdTm = setInterval(() => { if (S.view === 'zdrive' && !document.hidden && !$('bkpOv') && !(document.activeElement && document.activeElement.id === 'zdQ')) renderZd(true); }, 8000);
+}
+function zdList() {
+  const Z = zdSt(), q = String(Z.q || '').trim().toLowerCase(); let L = (Z.ents || []).filter(e => !q || e.n.toLowerCase().indexOf(q) >= 0);
+  const k = Z.sort, a = Z.asc ? 1 : -1;
+  L.sort((x, y) => { if (x.d !== y.d) return x.d ? -1 : 1; let r = k === 'd' ? x.m - y.m : k === 's' ? x.s - y.s : k === 't' ? (zdType(x.n, x.d) < zdType(y.n, y.d) ? -1 : zdType(x.n, x.d) > zdType(y.n, y.d) ? 1 : 0) : 0; if (!r) r = x.n.toLowerCase() < y.n.toLowerCase() ? -1 : x.n.toLowerCase() > y.n.toLowerCase() ? 1 : 0; return r * a; });
+  return L;
+}
+function zdDraw() {
+  const m = $('main'), Z = zdSt(); if (!m || !Z.ents) return; const L = zdList(); Z.cur = L;
+  const min = zdMin(), cr = [min ? '<span class="muted">🗂 ALL CLIENT</span>' : '<button class="link" onclick="zdGo(-1)">🗂 Z:</button>'].concat(Z.path.map((p, i) => i < min ? '' : i === Z.path.length - 1 ? '<b>' + esc(p) + '</b>' : '<button class="link" onclick="zdGo(' + i + ')">' + esc(p) + '</button>').filter(Boolean));
+  const th = (k, t) => '<button class="zd-th' + (Z.sort === k ? ' on' : '') + '" onclick="zdSort(\'' + k + '\')">' + t + (Z.sort === k ? (Z.asc ? ' ▲' : ' ▼') : '') + '</button>';
+  const nf = L.filter(e => e.d).length, nfile = L.length - nf;
+  m.innerHTML = '<div class="fs-page" id="zdPage"><div class="fs-bar"><button class="btn sm" onclick="zdUp()" ' + (Z.path.length <= min ? 'disabled' : '') + ' title="एक फ़ोल्डर ऊपर">⬆ ऊपर</button><span class="fs-cr">' + cr.join(' <span class="muted">›</span> ') + '</span><span class="iw2-sp"></span>'
+    + '<input id="zdQ" class="fs-q" placeholder="🔍 इस फ़ोल्डर में खोजें" value="' + esc(Z.q || '') + '" oninput="zdSt().q=this.value;clearTimeout(S.zdT);S.zdT=setTimeout(zdQDraw,200)">'
+    + '<button class="btn sm" onclick="zdFolder()" title="Windows के फ़ोल्डर में खोलो">📂 फ़ोल्डर खोलो</button><button class="btn sm" onclick="renderZd()" title="ताज़ा करो">🔄</button></div>'
+    + '<div class="zd-hd">' + th('n', 'नाम') + th('d', 'बदलने की तारीख') + th('t', 'प्रकार') + th('s', 'साइज़') + '<span></span></div>'
+    + (L.length ? '<div class="fs-rows zd-rows">' + L.map((e, i) => '<div class="fs-row zd-row' + (Z.sel === i ? ' sel' : '') + '" onclick="zdPick(' + i + ')" ondblclick="zdOpen(' + i + ')"><span class="zd-n"><span class="zf-i">' + zdIco(e.n, e.d) + '</span><span class="fs-nm" title="' + esc(e.n) + '">' + esc(e.n) + '</span></span><span class="muted small zd-c">' + zdDt(e.m) + '</span><span class="muted small zd-c">' + esc(zdType(e.n, e.d)) + '</span><span class="muted small zd-c zd-s">' + (e.d ? '' : zdFmt(e.s)) + '</span><span class="zd-b">' + (e.d ? '' : '<button class="btn sm primary" onclick="event.stopPropagation();zdView(' + i + ')" title="यहीं देखो">👁</button><button class="btn sm" onclick="event.stopPropagation();zdOpen(' + i + ')" title="कंप्यूटर के प्रोग्राम में खोलो">📂 खोलो</button>') + '</span></div>').join('') + '</div>' : emptyArt('empty-files', Z.q ? 'कुछ नहीं मिला' : 'यह फ़ोल्डर खाली है'))
+    + '<div class="muted small zd-ft">' + fmtNum(nf) + ' फ़ोल्डर · ' + fmtNum(nfile) + ' फ़ाइलें' + (Z.q ? ' (खोज)' : '') + ' · दो बार क्लिक = खुलेगा · नई फ़ाइल डालो तो अपने-आप दिखेगी</div></div>';
+}
+function zdQDraw() { const Z = zdSt(); zdDraw(); const qi = $('zdQ'); if (qi) { qi.focus(); try { qi.setSelectionRange(qi.value.length, qi.value.length); } catch (e) {} } }
+function zdSort(k) { const Z = zdSt(); if (Z.sort === k) Z.asc = !Z.asc; else { Z.sort = k; Z.asc = k !== 'd'; } zdDraw(); }
+function zdPick(i) { const Z = zdSt(); Z.sel = i; document.querySelectorAll('.zd-row').forEach((r, j) => r.classList.toggle('sel', j === i)); }
+function zdRel(name) { return zdSt().path.concat(name ? [name] : []).join('/'); }
+function zdGo(i) { const Z = zdSt(); Z.path = i < 0 ? [] : Z.path.slice(0, i + 1); Z.sel = -1; Z.q = ''; Z.ents = null; renderZd(); }
+function zdUp() { const Z = zdSt(); if (Z.path.length <= zdMin()) return false; Z.path.pop(); Z.sel = -1; Z.q = ''; Z.ents = null; renderZd(); return true; }
+async function zdOpen(i) {
+  const Z = zdSt(), e = (Z.cur || [])[i]; if (!e) return;
+  if (e.d) { Z.path.push(e.n); Z.sel = -1; Z.q = ''; Z.ents = null; return renderZd(); }
+  try { await window.pcDesk.zbOpen(zdRel(e.n)); } catch (er) { fail(er); }
+}
+async function zdFolder() { try { await window.pcDesk.zbShow(zdRel('')); } catch (er) { fail(er); } }
+async function zdView(i) {
+  const e = (zdSt().cur || [])[i]; if (!e || e.d) return; const nm = e.n, rel = zdRel(nm);
+  bkpViewClose();
+  const o = document.createElement('div'); o.id = 'bkpOv'; o.className = 'bkp-ov';
+  o.innerHTML = '<div class="bkp-ov-box"><div class="bkp-ov-h"><button class="btn sm" onclick="bkpViewClose()">← वापस</button><b class="bkp-ov-t">' + esc(nm) + '</b><span id="fvName" class="muted small"></span><span class="bkp-ov-sp"></span><button class="btn sm" id="fvPrint" disabled onclick="printFile()">🖨 प्रिंट</button><button class="btn sm" id="fvDl" disabled onclick="saveBlob(S.lastFile)">⬇ सेव</button><button class="btn sm" onclick="zdOpen(' + i + ')">📂 खोलो</button><button class="btn sm" onclick="bkpViewClose()">✖ बंद</button></div><div class="progress bkp-ov-p"><div id="fvBar" class="progress-bar" style="width:100%;opacity:.35"></div><span id="fvPct">⏳ Z: से आ रही है…</span></div><div id="fvBody" class="fv-body pdfhost bkp-ov-b"></div></div>';
+  o.addEventListener('click', ev => { if (ev.target === o) bkpViewClose(); });
+  document.body.appendChild(o); document.addEventListener('keydown', bkpViewKey);
+  try {
+    const t0 = Date.now(), b = await window.pcDesk.zbRead(rel); if (!$('bkpOv')) return;
+    const ext = (nm.match(/\.([a-z0-9]+)$/i) || [0, ''])[1].toLowerCase(), mime = ext === 'pdf' ? 'application/pdf' : /^(jpe?g)$/.test(ext) ? 'image/jpeg' : ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'application/octet-stream';
+    const u8 = new Uint8Array(b), f = { name: nm, mime, bytes: u8 }; f.blob = new Blob([u8], { type: mime }); f.url = URL.createObjectURL(f.blob); S.lastFile = f;
+    if ($('fvName')) $('fvName').textContent = zdFmt(u8.length) + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + ' सेकंड';
+    if ($('fvDl')) $('fvDl').disabled = false; if ($('fvPrint')) $('fvPrint').disabled = false;
+    const body = $('fvBody'); if ($('fvBar')) $('fvBar').style.opacity = '1';
+    if (mime === 'application/pdf') { if ($('fvPct')) $('fvPct').textContent = 'पन्ने बन रहे हैं…'; body.innerHTML = '<div id="pdfPages" class="pdfpages fit"></div>'; try { await showPdf(f.bytes); } catch (er) { body.innerHTML = '<div class="empty">' + esc(er.message || 'PDF नहीं खुल पाई') + ' — 📂 खोलो से देखें।</div>'; } }
+    else if (mime.indexOf('image/') === 0) body.innerHTML = '<img src="' + f.url + '" alt="">';
+    else body.innerHTML = emptyArt('empty-files', 'इस फाइल (' + esc(ext.toUpperCase()) + ') का प्रीव्यू यहाँ नहीं दिख सकता — 📂 खोलो से कंप्यूटर के प्रोग्राम में खोलें।');
+    if ($('fvPct')) $('fvPct').textContent = 'तैयार ✓';
+  } catch (er) { if ($('fvBody')) $('fvBody').innerHTML = '<div class="empty">' + esc(er.message || er) + '</div>'; if ($('fvPct')) $('fvPct').textContent = '✗'; }
+}
+document.addEventListener('keydown', e => {
+  if (S.view !== 'zdrive' || $('bkpOv') || !zdSt().cur) return; const t = e.target, tg = t && t.tagName; if (tg === 'INPUT' || tg === 'TEXTAREA' || tg === 'SELECT') return;
+  const Z = zdSt(), n = Z.cur.length;
+  if (e.key === 'ArrowDown' && n) { e.preventDefault(); zdPick(Math.min(n - 1, Z.sel + 1)); const r = document.querySelectorAll('.zd-row')[Z.sel]; if (r) r.scrollIntoView({ block: 'nearest' }); }
+  else if (e.key === 'ArrowUp' && n) { e.preventDefault(); zdPick(Math.max(0, Z.sel - 1)); const r = document.querySelectorAll('.zd-row')[Z.sel]; if (r) r.scrollIntoView({ block: 'nearest' }); }
+  else if (e.key === 'Enter' && Z.sel >= 0) { e.preventDefault(); zdOpen(Z.sel); }
+});
 async function renderFs() {
   if (!fsCan()) return setView('home');
   if (zfsOn()) return renderZfs();
