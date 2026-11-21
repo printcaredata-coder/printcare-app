@@ -1809,6 +1809,12 @@
 .zd-row:hover .zd-b,.zd-row.sel .zd-b{opacity:1}
 .zd-row:hover{background:rgba(31,111,235,.06)}
 .zd-ft{margin-top:8px}
+.zd-cm{position:fixed;z-index:9999;min-width:230px;background:var(--card,#fff);border:1px solid var(--line,#d5d9e3);border-radius:10px;box-shadow:0 8px 28px rgba(15,23,42,.22);padding:5px}
+.zd-mi{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:7px 10px;font-size:14px;color:inherit;cursor:pointer}
+.zd-mi span{width:20px;text-align:center}
+.zd-mi:hover:not([disabled]){background:rgba(31,111,235,.1)}
+.zd-mi[disabled]{opacity:.4;cursor:default}
+.zd-ms{height:1px;background:var(--line,#e3e3ea);margin:4px 6px}
 @media(max-width:760px){.zd-hd{display:none}.zd-row{grid-template-columns:1fr auto}.zd-row .zd-c{display:none}.zd-row .zd-b{opacity:1}}
 .fs-nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 220px;text-align:left}
 .fs-ok{font-size:16px}.fs-who{max-width:190px}.fs-act{display:inline-flex;gap:4px;margin-left:auto}
@@ -7434,7 +7440,7 @@ async function zfsView(i) {
    नितिन + भावना को पूरा Z:, बाकी (अंजलि) को सिर्फ़ ALL CLIENT */
 function zdOn() { return !!(window.PC_DESK && window.pcDesk && window.pcDesk.zDir && fsCan() && !bkpOnly()); }
 function zdFull() { return !!(S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna')); }
-function zdSt() { return S.zd || (S.zd = { path: [], q: '', sort: 'n', asc: true, sel: -1, ents: null }); }
+function zdSt() { return S.zd || (S.zd = { path: [], q: '', sort: 'n', asc: true, sel: -1, sels: {}, ents: null }); }
 function zdMin() { return zdFull() ? 0 : 1; }
 function zdFmt(n) { return n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B'; }
 function zdIco(n, d) { return d ? '📁' : /\.pdf$/i.test(n) ? '📕' : /\.(cdr|ai|psd|eps)$/i.test(n) ? '🎨' : /\.(jpe?g|png|gif|tif+|bmp|webp)$/i.test(n) ? '🖼' : /\.(xlsx?|csv)$/i.test(n) ? '📊' : /\.(docx?|txt)$/i.test(n) ? '📝' : /\.(zip|rar|7z)$/i.test(n) ? '🗜' : /\.exe$/i.test(n) ? '⚙️' : '📄'; }
@@ -7468,22 +7474,107 @@ function zdDraw() {
   const min = zdMin(), cr = [min ? '<span class="muted">🗂 ALL CLIENT</span>' : '<button class="link" onclick="zdGo(-1)">🗂 Z:</button>'].concat(Z.path.map((p, i) => i < min ? '' : i === Z.path.length - 1 ? '<b>' + esc(p) + '</b>' : '<button class="link" onclick="zdGo(' + i + ')">' + esc(p) + '</button>').filter(Boolean));
   const th = (k, t) => '<button class="zd-th' + (Z.sort === k ? ' on' : '') + '" onclick="zdSort(\'' + k + '\')">' + t + (Z.sort === k ? (Z.asc ? ' ▲' : ' ▼') : '') + '</button>';
   const nf = L.filter(e => e.d).length, nfile = L.length - nf;
-  m.innerHTML = '<div class="fs-page" id="zdPage"><div class="fs-bar"><button class="btn sm" onclick="zdUp()" ' + (Z.path.length <= min ? 'disabled' : '') + ' title="एक फ़ोल्डर ऊपर">⬆ ऊपर</button><span class="fs-cr">' + cr.join(' <span class="muted">›</span> ') + '</span><span class="iw2-sp"></span>'
+  m.innerHTML = '<div class="fs-page" id="zdPage" oncontextmenu="zdCm(event,-1)"><div class="fs-bar"><button class="btn sm" onclick="zdUp()" ' + (Z.path.length <= min ? 'disabled' : '') + ' title="एक फ़ोल्डर ऊपर">⬆ ऊपर</button><span class="fs-cr">' + cr.join(' <span class="muted">›</span> ') + '</span><span class="iw2-sp"></span>'
     + '<input id="zdQ" class="fs-q" placeholder="🔍 इस फ़ोल्डर में खोजें" value="' + esc(Z.q || '') + '" oninput="zdSt().q=this.value;clearTimeout(S.zdT);S.zdT=setTimeout(zdQDraw,200)">'
     + '<button class="btn sm" onclick="zdFolder()" title="Windows के फ़ोल्डर में खोलो">📂 फ़ोल्डर खोलो</button><button class="btn sm" onclick="renderZd()" title="ताज़ा करो">🔄</button></div>'
     + '<div class="zd-hd">' + th('n', 'नाम') + th('d', 'बदलने की तारीख') + th('t', 'प्रकार') + th('s', 'साइज़') + '<span></span></div>'
-    + (L.length ? '<div class="fs-rows zd-rows">' + L.map((e, i) => '<div class="fs-row zd-row' + (Z.sel === i ? ' sel' : '') + '" onclick="zdPick(' + i + ')" ondblclick="zdOpen(' + i + ')"><span class="zd-n"><span class="zf-i">' + zdIco(e.n, e.d) + '</span><span class="fs-nm" title="' + esc(e.n) + '">' + esc(e.n) + '</span></span><span class="muted small zd-c">' + zdDt(e.m) + '</span><span class="muted small zd-c">' + esc(zdType(e.n, e.d)) + '</span><span class="muted small zd-c zd-s">' + (e.d ? '' : zdFmt(e.s)) + '</span><span class="zd-b">' + (e.d ? '' : '<button class="btn sm primary" onclick="event.stopPropagation();zdView(' + i + ')" title="यहीं देखो">👁</button><button class="btn sm" onclick="event.stopPropagation();zdOpen(' + i + ')" title="कंप्यूटर के प्रोग्राम में खोलो">📂 खोलो</button>') + '</span></div>').join('') + '</div>' : emptyArt('empty-files', Z.q ? 'कुछ नहीं मिला' : 'यह फ़ोल्डर खाली है'))
-    + '<div class="muted small zd-ft">' + fmtNum(nf) + ' फ़ोल्डर · ' + fmtNum(nfile) + ' फ़ाइलें' + (Z.q ? ' (खोज)' : '') + ' · दो बार क्लिक = खुलेगा · नई फ़ाइल डालो तो अपने-आप दिखेगी</div></div>';
+    + (L.length ? '<div class="fs-rows zd-rows">' + L.map((e, i) => '<div class="fs-row zd-row' + (Z.sels && Z.sels[e.n] ? ' sel' : '') + '" onclick="zdPick(' + i + ',event)" ondblclick="zdOpen(' + i + ')" oncontextmenu="zdCm(event,' + i + ')"><span class="zd-n"><span class="zf-i">' + zdIco(e.n, e.d) + '</span><span class="fs-nm" title="' + esc(e.n) + '">' + esc(e.n) + '</span></span><span class="muted small zd-c">' + zdDt(e.m) + '</span><span class="muted small zd-c">' + esc(zdType(e.n, e.d)) + '</span><span class="muted small zd-c zd-s">' + (e.d ? '' : zdFmt(e.s)) + '</span><span class="zd-b">' + (e.d ? '' : '<button class="btn sm primary" onclick="event.stopPropagation();zdView(' + i + ')" title="यहीं देखो">👁</button><button class="btn sm" onclick="event.stopPropagation();zdOpen(' + i + ')" title="कंप्यूटर के प्रोग्राम में खोलो">📂 खोलो</button>') + '</span></div>').join('') + '</div>' : emptyArt('empty-files', Z.q ? 'कुछ नहीं मिला' : 'यह फ़ोल्डर खाली है'))
+    + '<div class="muted small zd-ft">' + fmtNum(nf) + ' फ़ोल्डर · ' + fmtNum(nfile) + ' फ़ाइलें' + (Z.q ? ' (खोज)' : '') + ' · दो बार क्लिक = खुलेगा · राइट-क्लिक = और काम · नई फ़ाइल डालो तो अपने-आप दिखेगी</div></div>';
 }
 function zdQDraw() { const Z = zdSt(); zdDraw(); const qi = $('zdQ'); if (qi) { qi.focus(); try { qi.setSelectionRange(qi.value.length, qi.value.length); } catch (e) {} } }
 function zdSort(k) { const Z = zdSt(); if (Z.sort === k) Z.asc = !Z.asc; else { Z.sort = k; Z.asc = k !== 'd'; } zdDraw(); }
-function zdPick(i) { const Z = zdSt(); Z.sel = i; document.querySelectorAll('.zd-row').forEach((r, j) => r.classList.toggle('sel', j === i)); }
+function zdPick(i, ev) {
+  const Z = zdSt(), L = Z.cur || [], e = L[i]; if (!e) return; zdCmHide();
+  if (ev && ev.shiftKey && Z.sel >= 0) { const a = Math.min(Z.sel, i), b = Math.max(Z.sel, i); Z.sels = {}; for (let k = a; k <= b; k++) Z.sels[L[k].n] = 1; }
+  else if (ev && (ev.ctrlKey || ev.metaKey)) { Z.sels = Z.sels || {}; if (Z.sels[e.n]) delete Z.sels[e.n]; else Z.sels[e.n] = 1; Z.sel = i; }
+  else { Z.sels = {}; Z.sels[e.n] = 1; Z.sel = i; }
+  zdMark();
+}
+function zdMark() { const Z = zdSt(), L = Z.cur || []; document.querySelectorAll('.zd-row').forEach((r, j) => r.classList.toggle('sel', !!(L[j] && Z.sels && Z.sels[L[j].n]))); }
+function zdSelEnts() { const Z = zdSt(); return (Z.cur || []).filter(e => Z.sels && Z.sels[e.n]); }
+function zdEdit() { return !!(S.user && !S.asUser && fsCan() && window.pcDesk && window.pcDesk.zbDelete); }
+function zdWho() { return (S.user && (S.user.name || S.user.username)) || '?'; }
+/* ⋮ राइट-क्लिक मेन्यू — कंप्यूटर की तरह */
+function zdCmHide() { const m = $('zdCm'); if (m) m.remove(); document.removeEventListener('click', zdCmHide); document.removeEventListener('keydown', zdCmKey); }
+function zdCmKey(e) { if (e.key === 'Escape') zdCmHide(); }
+function zdCm(ev, i) {
+  ev.preventDefault(); ev.stopPropagation(); const Z = zdSt(), L = Z.cur || [], e = i >= 0 ? L[i] : null; zdCmHide();
+  if (e && !(Z.sels && Z.sels[e.n])) { Z.sels = {}; Z.sels[e.n] = 1; Z.sel = i; zdMark(); }
+  const sel = e ? zdSelEnts() : [], one = sel.length === 1 ? sel[0] : null, ed = zdEdit(), clip = S.zdClip && S.zdClip.items.length, tp = Z.path.length === 0;
+  const it = (ic, t, fn, dis) => '<button class="zd-mi" ' + (dis ? 'disabled' : 'onclick="zdCmHide();' + fn + '"') + '><span>' + ic + '</span>' + t + '</button>';
+  const sep = '<div class="zd-ms"></div>'; let h = '';
+  if (e) {
+    h += it('📂', 'खोलो', 'zdOpen(' + L.indexOf(one) + ')', !one);
+    if (one && !one.d) h += it('👁', 'यहीं देखो', 'zdView(' + L.indexOf(one) + ')');
+    h += it('📍', 'Windows के फ़ोल्डर में दिखाओ', 'zdShowSel()');
+    if (ed) { h += sep + it('✂', 'Cut (काटो)', 'zdClipSet(true)', tp) + it('📋', 'Copy (नक़ल)', 'zdClipSet(false)') + it('✏', 'Rename (नाम बदलो)', 'zdRename()', !one || tp) + it('🗜', 'ZIP बनाओ', 'zdZip()') + it('🗑', 'Delete (हटाओ)', 'zdDel()', tp); }
+    h += sep + it('🔗', 'रास्ता (path) कॉपी करो', 'zdCopyPath()') + it('ℹ', 'Properties', 'zdProps()');
+    if (ed && one && one.d) h += sep + it('📋', 'इस फ़ोल्डर में Paste', "zdPaste(zdSt().cur[" + L.indexOf(one) + "].n)", !clip);
+  } else {
+    if (ed) h += it('📋', 'Paste (यहाँ रखो)' + (clip ? ' — ' + S.zdClip.items.length : ''), 'zdPaste()', !clip) + it('📁', 'नया फ़ोल्डर', 'zdNew()', false);
+    h += (ed ? sep : '') + it('🔄', 'ताज़ा करो', 'renderZd()') + it('📂', 'Windows में यह फ़ोल्डर खोलो', 'zdFolder()') + it('ℹ', 'इस फ़ोल्डर की Properties', 'zdProps(true)');
+  }
+  const m = document.createElement('div'); m.id = 'zdCm'; m.className = 'zd-cm'; m.innerHTML = h; document.body.appendChild(m);
+  const w = m.offsetWidth, hh = m.offsetHeight; m.style.left = Math.max(4, Math.min(ev.clientX, innerWidth - w - 6)) + 'px'; m.style.top = Math.max(4, Math.min(ev.clientY, innerHeight - hh - 6)) + 'px';
+  setTimeout(() => { document.addEventListener('click', zdCmHide); document.addEventListener('keydown', zdCmKey); }, 0);
+}
+function zdSelRels() { return zdSelEnts().map(e => zdRel(e.n)); }
+function zdClipSet(move) { const r = zdSelRels(); if (!r.length) return; S.zdClip = { items: r, move: !!move }; toast((move ? '✂ कट: ' : '📋 कॉपी: ') + r.length + ' चीज़ — अब जहाँ रखना है वहाँ Paste करो'); }
+async function zdPaste(sub) {
+  if (!S.zdClip || !S.zdClip.items.length) return toast('पहले Copy या Cut करो', true); const c = S.zdClip, dest = zdRel(sub || '');
+  toast('⏳ ' + (c.move ? 'हटा रहे हैं…' : 'नक़ल हो रही है…') + ' (बड़ी फ़ाइल हो तो समय लगेगा)');
+  try { const r = await window.pcDesk.zbPaste(c.items, dest, c.move, zdWho()); if (c.move && r.n) S.zdClip = null; toast((r.n ? '✅ ' + r.n + ' चीज़ ' + (c.move ? 'रखी' : 'नक़ल की') : 'कुछ नहीं हुआ') + (r.errs.length ? ' · ❌ ' + r.errs.join(' · ') : ''), !!r.errs.length); } catch (er) { fail(er); }
+  S.zd.sig = ''; renderZd(true);
+}
+function zdAskName(title, val, ok) {
+  return new Promise(res => {
+    S.askRes = v => { S.askRes = null; closeModal(); res(v); };
+    openModal(title, '<input id="zdNm" class="fs-q" style="width:100%" value="' + esc(val || '') + '" onkeydown="if(event.key===\'Enter\')S.askRes&&S.askRes($(\'zdNm\').value)"><div class="actions" style="margin-top:12px"><button class="btn" onclick="S.askRes&&S.askRes(null)">रद्द करें</button><button class="btn primary" onclick="S.askRes&&S.askRes($(\'zdNm\').value)">' + esc(ok || 'ठीक है') + '</button></div>');
+    setTimeout(() => { const b = $('zdNm'); if (b) { b.focus(); const d = String(val || '').lastIndexOf('.'); try { b.setSelectionRange(0, d > 0 ? d : b.value.length); } catch (e) {} } }, 40);
+  });
+}
+async function zdRename() {
+  const e = zdSelEnts()[0]; if (!e || zdSelEnts().length !== 1) return; const nn = await zdAskName('✏ नया नाम', e.n, 'नाम बदलो'); if (nn == null || !String(nn).trim() || nn === e.n) return;
+  try { await window.pcDesk.zbRename(zdRel(e.n), nn, zdWho()); const Z = zdSt(); Z.sels = {}; Z.sels[String(nn).trim()] = 1; toast('✅ नाम बदल गया'); } catch (er) { fail(er); }
+  S.zd.sig = ''; renderZd(true);
+}
+async function zdNew() {
+  const nn = await zdAskName('📁 नए फ़ोल्डर का नाम', 'नया फ़ोल्डर', 'बनाओ'); if (nn == null || !String(nn).trim()) return;
+  try { await window.pcDesk.zbMkdir(zdRel(''), nn, zdWho()); const Z = zdSt(); Z.sels = {}; Z.sels[String(nn).trim()] = 1; toast('✅ फ़ोल्डर बन गया'); } catch (er) { fail(er); }
+  S.zd.sig = ''; renderZd(true);
+}
+async function zdDel() {
+  const sel = zdSelEnts(); if (!sel.length) return; const nm = sel.length === 1 ? '"' + sel[0].n + '"' : sel.length + ' चीज़ें';
+  if (!await askYes('🗑 ' + nm + ' हटानी हैं?\n\nपक्का नहीं मिटेगा — "_RECYCLE PrintCare" फ़ोल्डर में चली जाएगी, वहाँ से वापस रखी जा सकती है।', 'हाँ, हटाओ')) return;
+  try { const r = await window.pcDesk.zbDelete(zdSelRels(), zdWho()); zdSt().sels = {}; toast((r.n ? '🗑 ' + r.n + ' चीज़ हटी (_RECYCLE PrintCare में)' : 'कुछ नहीं हटा') + (r.errs.length ? ' · ❌ ' + r.errs.join(' · ') : ''), !!r.errs.length); } catch (er) { fail(er); }
+  S.zd.sig = ''; renderZd(true);
+}
+async function zdZip() {
+  const sel = zdSelEnts(); if (!sel.length) return; toast('⏳ ZIP बन रही है… (बड़ी हो तो समय लगेगा)');
+  try { const o = await window.pcDesk.zbZip(zdSelRels(), zdRel(''), zdWho()); toast('✅ ZIP बन गई: ' + String(o).split('\\').pop()); } catch (er) { fail(er); }
+  S.zd.sig = ''; renderZd(true);
+}
+async function zdShowSel() { const e = zdSelEnts()[0]; if (!e) return; try { await window.pcDesk.zbShow(zdRel(e.n)); } catch (er) { fail(er); } }
+async function zdCopyPath() {
+  const e = zdSelEnts()[0]; if (!e) return; const base = String(zdSt().base || 'Z:\\').replace(/[\\/]+$/, ''), p = base + '\\' + zdRel(e.n).split('/').join('\\');
+  try { await navigator.clipboard.writeText(p); toast('🔗 रास्ता कॉपी हुआ: ' + p); } catch (er) { toast(p); }
+}
+async function zdProps(folder) {
+  const e = folder ? null : zdSelEnts()[0], rel = e ? zdRel(e.n) : zdRel('');
+  try {
+    const r = await window.pcDesk.zbProps(rel), nm = e ? e.n : (zdSt().path.slice(-1)[0] || 'Z:');
+    openModal('ℹ Properties', '<div style="font-size:15px;line-height:1.7"><b>' + esc(nm) + '</b><br><span class="muted small" style="word-break:break-all">' + esc(r.path) + '</span><hr>'
+      + (r.dir ? '📁 फ़ोल्डर · ' + fmtNum(r.files) + ' फ़ाइलें, ' + fmtNum(r.folders) + ' फ़ोल्डर' + (r.cut ? ' (गिनती अधूरी — बहुत बड़ा)' : '') + '<br>' : '📄 फ़ाइल<br>')
+      + 'साइज़: <b>' + zdFmt(r.size) + '</b><br>बदली: ' + zdDt(r.m) + (r.c ? '<br>बनी: ' + zdDt(r.c) : '') + '</div><div class="actions"><button class="btn primary" onclick="closeModal()">ठीक है</button></div>');
+  } catch (er) { fail(er); }
+}
+
 function zdRel(name) { return zdSt().path.concat(name ? [name] : []).join('/'); }
-function zdGo(i) { const Z = zdSt(); Z.path = i < 0 ? [] : Z.path.slice(0, i + 1); Z.sel = -1; Z.q = ''; Z.ents = null; renderZd(); }
-function zdUp() { const Z = zdSt(); if (Z.path.length <= zdMin()) return false; Z.path.pop(); Z.sel = -1; Z.q = ''; Z.ents = null; renderZd(); return true; }
+function zdGo(i) { const Z = zdSt(); Z.path = i < 0 ? [] : Z.path.slice(0, i + 1); Z.sel = -1; Z.sels = {}; Z.q = ''; Z.ents = null; renderZd(); }
+function zdUp() { const Z = zdSt(); if (Z.path.length <= zdMin()) return false; Z.path.pop(); Z.sel = -1; Z.sels = {}; Z.q = ''; Z.ents = null; renderZd(); return true; }
 async function zdOpen(i) {
   const Z = zdSt(), e = (Z.cur || [])[i]; if (!e) return;
-  if (e.d) { Z.path.push(e.n); Z.sel = -1; Z.q = ''; Z.ents = null; return renderZd(); }
+  if (e.d) { Z.path.push(e.n); Z.sel = -1; Z.sels = {}; Z.q = ''; Z.ents = null; return renderZd(); }
   try { await window.pcDesk.zbOpen(zdRel(e.n)); } catch (er) { fail(er); }
 }
 async function zdFolder() { try { await window.pcDesk.zbShow(zdRel('')); } catch (er) { fail(er); } }
@@ -7510,9 +7601,19 @@ async function zdView(i) {
 document.addEventListener('keydown', e => {
   if (S.view !== 'zdrive' || $('bkpOv') || !zdSt().cur) return; const t = e.target, tg = t && t.tagName; if (tg === 'INPUT' || tg === 'TEXTAREA' || tg === 'SELECT') return;
   const Z = zdSt(), n = Z.cur.length;
-  if (e.key === 'ArrowDown' && n) { e.preventDefault(); zdPick(Math.min(n - 1, Z.sel + 1)); const r = document.querySelectorAll('.zd-row')[Z.sel]; if (r) r.scrollIntoView({ block: 'nearest' }); }
-  else if (e.key === 'ArrowUp' && n) { e.preventDefault(); zdPick(Math.max(0, Z.sel - 1)); const r = document.querySelectorAll('.zd-row')[Z.sel]; if (r) r.scrollIntoView({ block: 'nearest' }); }
+  if (e.key === 'ArrowDown' && n) { e.preventDefault(); zdPick(Math.min(n - 1, Z.sel + 1), e); const r = document.querySelectorAll('.zd-row')[Z.sel]; if (r) r.scrollIntoView({ block: 'nearest' }); }
+  else if (e.key === 'ArrowUp' && n) { e.preventDefault(); zdPick(Math.max(0, Z.sel - 1), e); const r = document.querySelectorAll('.zd-row')[Z.sel]; if (r) r.scrollIntoView({ block: 'nearest' }); }
   else if (e.key === 'Enter' && Z.sel >= 0) { e.preventDefault(); zdOpen(Z.sel); }
+  else if (zdEdit()) {
+    const k = String(e.key).toLowerCase(), c = e.ctrlKey || e.metaKey;
+    if (c && k === 'a') { e.preventDefault(); Z.sels = {}; Z.cur.forEach(x => Z.sels[x.n] = 1); zdMark(); }
+    else if (c && k === 'c' && zdSelEnts().length) { e.preventDefault(); zdClipSet(false); }
+    else if (c && k === 'x' && zdSelEnts().length && Z.path.length) { e.preventDefault(); zdClipSet(true); }
+    else if (c && k === 'v') { e.preventDefault(); zdPaste(); }
+    else if (e.key === 'F2' && zdSelEnts().length === 1 && Z.path.length) { e.preventDefault(); zdRename(); }
+    else if (e.key === 'Delete' && zdSelEnts().length && Z.path.length) { e.preventDefault(); zdDel(); }
+    else if (c && e.shiftKey && k === 'n') { e.preventDefault(); zdNew(); }
+  }
 });
 async function renderFs() {
   if (!fsCan()) return setView('home');
