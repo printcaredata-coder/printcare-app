@@ -12972,9 +12972,9 @@ boot();
     var box = document.getElementById('modalBody');
     if (!box || !code) return;
     var old = document.getElementById('zPanel'); if (old) old.remove();
-    var sec = document.createElement('div'); sec.id = 'zPanel'; sec.className = 'card'; sec.style.marginTop = '10px';
+    var sec = document.createElement('div'); sec.id = 'zPanel'; sec.className = 'card'; sec.style.margin = '6px 0';
     sec.innerHTML = '<div class="small"><b>💻 कंप्यूटर में इस आइटम का फ़ोल्डर (Z:)</b></div><div id="zfBox"><div class="loading">लोड हो रहा है…</div></div>';
-    box.appendChild(sec);
+    box.insertBefore(sec, box.firstChild);
     window.pcDesk.zItemFind(code).then(function (hits) {
       var b = document.getElementById('zfBox'); if (!b) return;
       if (!hits || !hits.length) { b.innerHTML = '<div class="muted">कंप्यूटर में इस कोड का फ़ोल्डर नहीं मिला</div>'; return; }
@@ -13004,12 +13004,21 @@ boot();
     openItemFolder(code).catch(function (e) { toast('गड़बड़: ' + ((e && e.message) || e), true); });
   }, true);
   /* आइटम / एडिट खिड़की खुले तो नीचे वही फ़ोल्डर की फ़ाइलें */
+  /* खिड़की भरने तक इंतज़ार (8 सेकंड), फिर ऊपर पैनल */
+  function zPanelWhenReady(code) {
+    var t0 = Date.now();
+    var iv = setInterval(function () {
+      var box = document.getElementById('modalBody');
+      if (!box || Date.now() - t0 > 8000 || document.getElementById('zPanel')) { clearInterval(iv); return; }
+      if (box.innerHTML.length > 800) { zPanel(code); clearInterval(iv); }
+    }, 250);
+  }
   var origIw = window.iwOpenModal;
-  if (typeof origIw === 'function') window.iwOpenModal = async function (code, i) { var r = await origIw.apply(this, arguments); setTimeout(function () { zPanel(code); }, 50); return r; };
+  if (typeof origIw === 'function') window.iwOpenModal = async function (code, i) { var r = await origIw.apply(this, arguments); zPanelWhenReady(code); return r; };
   var origRow = window.openRow;
   if (typeof origRow === 'function') window.openRow = async function (i, plain) {
     var r = await origRow.apply(this, arguments);
-    try { var d = S.data, row = d && d.rows[i], ci = d ? codeCi(d) : -1; if (d && d.tab === 'Job Register' && row && ci >= 0) setTimeout(function () { zPanel(String(row.v[ci] || '').trim()); }, 50); } catch (e) {}
+    try { var d = S.data, row = d && d.rows[i], ci = d ? codeCi(d) : -1; if (d && d.tab === 'Job Register' && row && ci >= 0) zPanelWhenReady(String(row.v[ci] || '').trim()); } catch (e) {}
     return r;
   };
 })();
