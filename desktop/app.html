@@ -1894,6 +1894,21 @@
     url: { getLocation: function (cb) { cb({ parameter: {}, hash: '' }); } } } };
   window.PC_DESK = true;
   window.open = function (u) { if (window.pcDesk && u) window.pcDesk.openExternal(String(u)); return null; };
+  /* 💾 डेस्कटॉप में: सर्वर का डेटा PC पर (D:\Print Care Data\data) — सिर्फ़ डेस्कटॉप में दिखता है */
+  window.addEventListener('DOMContentLoaded', function () {
+    if (!window.pcDesk || !window.pcDesk.dataPull) return;
+    var b = document.createElement('button');
+    b.textContent = '💾 डेटा PC पर लाओ';
+    b.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:9999;padding:8px 12px;border-radius:8px;border:0;background:#1a4d8f;color:#fff;font-size:13px;cursor:pointer';
+    b.onclick = function () {
+      b.disabled = true; b.textContent = 'लिया जा रहा है...';
+      window.pcDesk.dataPull(['Job Register', 'Order Booking']).then(function (r) {
+        var msg = Object.keys(r || {}).map(function (k) { return k + ': ' + r[k]; }).join('\n');
+        alert(r && r.err ? r.err : (msg || 'कोई जवाब नहीं'));
+      }, function (e) { alert('गड़बड़: ' + e); }).then(function () { b.disabled = false; b.textContent = '💾 डेटा PC पर लाओ'; });
+    };
+    document.body.appendChild(b);
+  });
 })();
 </script><script>
 const S = { token: null, user: null, tabs: [], tab: null, data: null, search: '', view: 'data', admin: null, editUser: -1, mem: null };
@@ -9148,7 +9163,7 @@ function bkpNote(job) {
 }
 function prodWho(r, p) { return p.type === 'out' ? (r.vendor || 'वेंडर तय नहीं') : (p.hi || p.name); }
 /* ---------- 🖨 तारा पैनल (मालिक 17-Nov): ⏳ बाकी काम · ✅ पूरे हुए · आज कितनी निकालीं ---------- */
-function taraPanelOn() { const P = S.prod || {}, U = S.prodUi || {}; if (U.tara !== undefined) return !!U.tara; return !(S.user && S.user.role === 'Admin') && (P.mine || []).length > 0 && P.mine.every(c => c === 'TARA'); }
+function taraPanelOn() { return false; }   /* 23-Nov (मालिक: "तारा का पहले वाला सब हटाओ"): पुराना तारा कार्ड बंद — तारा / नितिन / भावना सबके लिए सिर्फ़ नया 📖 बुक प्रिंटिंग पैनल */
 function drawTara() {
   const m = $('main'), P = S.prod, U = S.prodUi; U.ttab = U.ttab || 'pend';
   const mine = (P.mine || []).indexOf('TARA') >= 0, today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -9239,7 +9254,7 @@ function drawProduction() {
     <div class="prod-bar">
       <div class="seg">${[['open', '⬜ बाकी + चालू'], ['done', '✅ हो चुके (30 दिन)'], ['all', 'सब']].map(o => `<button class="btn sm ${U.show === o[0] ? 'on' : ''}" onclick="S.prodUi.show='${o[0]}';drawProduction()">${o[1]}</button>`).join('')}</div>
       <input type="search" placeholder="🔍 JOB NUMBER / ITAM CODE / पार्टी / वेंडर" value="${esc(U.q)}" oninput="S.prodUi.q=this.value;clearTimeout(S.pqT);S.pqT=setTimeout(drawProduction,250)">
-      <button class="btn sm" onclick="renderProduction()">🔄</button><button class="btn sm" onclick="S.prodUi.tara=true;drawProduction()">🖨 तारा पैनल</button><button class="btn sm" onclick="buyOpen('')">🧾 Workflow</button><button class="btn sm" onclick="paperOrder()">📃 पेपर ऑर्डर</button>${P.canToner ? '<button class="btn sm" onclick="openToner()">🖨 टोनर रीडिंग</button>' : ''}${S.procMeta.canTemplate ? '<button class="btn sm" onclick="openCombo()">🔗 कॉम्बो छपाई</button>' : ''}
+      <button class="btn sm" onclick="renderProduction()">🔄</button><button class="btn sm" onclick="buyOpen('')">🧾 Workflow</button><button class="btn sm" onclick="paperOrder()">📃 पेपर ऑर्डर</button>${P.canToner ? '<button class="btn sm" onclick="openToner()">🖨 टोनर रीडिंग</button>' : ''}${S.procMeta.canTemplate ? '<button class="btn sm" onclick="openCombo()">🔗 कॉम्बो छपाई</button>' : ''}
       <span class="muted small">प्रोडक्शन ${esc(showDate(P.start))} से · पुराने ऑर्डर पूरे माने गए</span></div>
     <div class="who-chips"><span class="muted small">किसका काम:</span>${chip(!U.who, '', 'सब', base.length)}${mine.size ? chip(U.who === 'mine', 'mine', '👤 मेरे काम', mineN) : ''}
       ${Object.keys(whoCnt).sort().map(w => chip(U.who === w, w, esc(w), whoCnt[w])).join('')}</div>
