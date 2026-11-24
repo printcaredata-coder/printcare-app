@@ -12939,6 +12939,80 @@ boot();
     return orig.apply(this, arguments);
   };
 })();
+/* 📁 JR का आइटम कोड दबाने पर: Z: में उस आइटम का फ़ोल्डर ऐप के अंदर खुले (Excel लिंक जैसा) — अंदर की फ़ाइलें/फ़ोल्डर यहीं दिखें;
+   आइटम खोलने / एडिट वाली खिड़की में भी वही फ़ाइलें दिखें */
+(function () {
+  if (!window.pcDesk || !window.pcDesk.zItemFind) return;
+  var ZR = 'ALL CLIENT/';
+  function eh(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function sz(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B'; }
+  function codeCi(d) { for (var k = 0; k < d.columns.length; k++) { if (/ITAM\s*CODE/i.test(d.columns[k].name)) return k; } return -1; }
+  function zfBody(rel, ents) {
+    var parts = rel.split('/'), parent = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+    var list = ents.slice().sort(function (a, b) { return (b.d - a.d) || String(a.n).localeCompare(String(b.n)); }).map(function (e) {
+      var r = rel + '/' + e.n;
+      return e.d
+        ? '<div class="zf-r"><button class="btn sm" data-zact="go" data-rel="' + eh(r) + '">📁 ' + eh(e.n) + '</button></div>'
+        : '<div class="zf-r"><span>📄 ' + eh(e.n) + '</span> <span class="muted small">' + sz(e.s) + '</span> <button class="btn sm primary" data-zact="open" data-rel="' + eh(r) + '">📂 खोलो</button> <button class="btn sm" data-zact="show" data-rel="' + eh(r) + '">💻 फ़ोल्डर में दिखाओ</button></div>';
+    }).join('');
+    return '<div class="zf-top"><div class="muted small">' + eh(rel) + '</div>' + (parent ? '<button class="btn sm" data-zact="go" data-rel="' + eh(parent) + '">⬆ ऊपर</button> ' : '') + '<button class="btn sm" data-zact="openfolder" data-rel="' + eh(rel) + '">🗂 Explorer में खोलो</button></div>' + (list || '<div class="muted">इस फ़ोल्डर में कुछ नहीं</div>');
+  }
+  async function zfShow(rel) {
+    var r = await window.pcDesk.zDir(rel);
+    var box = document.getElementById('zfBox');
+    if (box) box.innerHTML = zfBody(rel, (r && r.ents) || []);
+  }
+  async function openItemFolder(code) {
+    var hits = await window.pcDesk.zItemFind(code);
+    if (!hits || !hits.length) { toast('कंप्यूटर में "' + code + '" का फ़ोल्डर नहीं मिला', true); return; }
+    openModal('📁 ' + code, '<div id="zfBox"><div class="loading">लोड हो रहा है…</div></div>', true);
+    await zfShow(ZR + hits[0].rel);
+  }
+  function zPanel(code) {
+    var box = document.getElementById('modalBody');
+    if (!box || !code) return;
+    var old = document.getElementById('zPanel'); if (old) old.remove();
+    var sec = document.createElement('div'); sec.id = 'zPanel'; sec.className = 'card'; sec.style.marginTop = '10px';
+    sec.innerHTML = '<div class="small"><b>💻 कंप्यूटर में इस आइटम का फ़ोल्डर (Z:)</b></div><div id="zfBox"><div class="loading">लोड हो रहा है…</div></div>';
+    box.appendChild(sec);
+    window.pcDesk.zItemFind(code).then(function (hits) {
+      var b = document.getElementById('zfBox'); if (!b) return;
+      if (!hits || !hits.length) { b.innerHTML = '<div class="muted">कंप्यूटर में इस कोड का फ़ोल्डर नहीं मिला</div>'; return; }
+      return zfShow(ZR + hits[0].rel);
+    }).catch(function (e) { var b = document.getElementById('zfBox'); if (b) b.innerHTML = '<div class="muted">गड़बड़: ' + eh((e && e.message) || e) + '</div>'; });
+  }
+  /* फ़ोल्डर के बटन: अंदर जाओ / खोलो / फ़ोल्डर में दिखाओ / Explorer में खोलो */
+  document.addEventListener('click', async function (ev) {
+    var b = ev.target && ev.target.closest ? ev.target.closest('[data-zact]') : null;
+    if (!b) return;
+    var rel = b.getAttribute('data-rel'), act = b.getAttribute('data-zact');
+    ev.preventDefault();
+    try {
+      if (act === 'go') await zfShow(rel);
+      else if (act === 'open' || act === 'openfolder') await window.pcDesk.zbOpen(rel);
+      else if (act === 'show') await window.pcDesk.zbShow(rel);
+    } catch (e) { toast('गड़बड़: ' + ((e && e.message) || e), true); }
+  });
+  /* JR में ITAM CODE वाला खाना दबाओ → आइटम फ़ोल्डर ऐप में खुले (पहले की तरह रो नहीं खुलेगी) */
+  document.addEventListener('click', function (ev) {
+    var td = ev.target && ev.target.closest ? ev.target.closest('td.c-code') : null;
+    if (!td || typeof S === 'undefined' || !S || !S.data || S.data.tab !== 'Job Register') return;
+    var tr = td.closest('tr'), i = Number(tr && tr.getAttribute('data-i')), ci = Number(td.getAttribute('data-ci'));
+    var row = S.data.rows[i]; if (!row) return;
+    var code = String(row.v[ci] || '').trim(); if (!code) return;
+    ev.preventDefault(); ev.stopPropagation();
+    openItemFolder(code).catch(function (e) { toast('गड़बड़: ' + ((e && e.message) || e), true); });
+  }, true);
+  /* आइटम / एडिट खिड़की खुले तो नीचे वही फ़ोल्डर की फ़ाइलें */
+  var origIw = window.iwOpenModal;
+  if (typeof origIw === 'function') window.iwOpenModal = async function (code, i) { var r = await origIw.apply(this, arguments); setTimeout(function () { zPanel(code); }, 50); return r; };
+  var origRow = window.openRow;
+  if (typeof origRow === 'function') window.openRow = async function (i, plain) {
+    var r = await origRow.apply(this, arguments);
+    try { var d = S.data, row = d && d.rows[i], ci = d ? codeCi(d) : -1; if (d && d.tab === 'Job Register' && row && ci >= 0) setTimeout(function () { zPanel(String(row.v[ci] || '').trim()); }, 50); } catch (e) {}
+    return r;
+  };
+})();
 </script>
 </body>
 </html>
