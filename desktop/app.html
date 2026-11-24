@@ -1872,10 +1872,52 @@
 /* PC_DESK_UI — Google के पेज के बिना: सर्वर से बात डेस्कटॉप (pcDesk.api) से, न हो तो सीधे POST */
 (function () {
   var EXEC = 'https://script.google.com/macros/s/AKfycbyapK5gRciZ_YeirqLfGo6qR9cRKwTNhxOu08vNgyQn1824TbsJtqxwSey_tkDBvn_66A/exec';
-  function call(fn, args) {
-    var p = window.pcDesk ? window.pcDesk.api(fn, args) :
+  /* 🔄 JR / ऑर्डर बुकिंग PC की कॉपी से पढ़े जाते हैं; सर्वर का बदलाव-निशान बदले तो कॉपी ताज़ा (main.js: tabCheck) */
+  var LIVE = ['Job Register', 'Order Booking'];
+  var READS = /^api(TabData|TabDataZ|TabStamp|TabStamps|MyTabs|ChangeStamp|LocalStamp|LocalInfo|Status|WsInfo|Boot|Login|Logout|Resume|GetRow|GetTab|TabOptions|ColumnValues|ItemOpen|ItemList|ItemFileInfo|FileInfo|Download|Export)$/;
+  var lastCheck = 0, checkP = null;
+  function srv(fn, args) {
+    return window.pcDesk ? window.pcDesk.api(fn, args) :
       fetch(EXEC, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow' })
         .then(function (r) { return r.json(); }, function () { return { ok: false, e: 'NET_OFFLINE' }; });
+  }
+  function refreshOpen(tabs) {
+    try {
+      if (typeof S !== 'undefined' && S && S.view === 'data' && tabs.indexOf(S.tab) >= 0 && typeof loadTab === 'function') { S.full = null; loadTab({ refresh: true }); }
+    } catch (e) {}
+  }
+  function liveCheck(force) {
+    if (!window.pcDesk || !window.pcDesk.tabCheck) return Promise.resolve(null);
+    if (!force && checkP) return checkP;
+    checkP = window.pcDesk.tabCheck(LIVE).then(function (r) {
+      checkP = null;
+      if (r && !r.err) lastCheck = Date.now();
+      if (r && r.changed && r.changed.length) refreshOpen(r.changed);
+      return r;
+    }, function () { checkP = null; return null; });
+    return checkP;
+  }
+  /* पढ़ने से पहले ताज़ा जाँच (8 सेकंड तक); हाल में जाँची हो तो सीधे कॉपी */
+  function freshFirst() {
+    if (!window.pcDesk || !window.pcDesk.tabCheck) return Promise.resolve();
+    var p = checkP || (Date.now() - lastCheck < 10000 ? null : liveCheck(true));
+    if (!p) return Promise.resolve();
+    return Promise.race([p, new Promise(function (res) { setTimeout(res, 8000); })]);
+  }
+  function call(fn, args) {
+    var p;
+    /* तारीख वाला फ़िल्टर (args[2]) हो तो सर्वर से ही (PC कॉपी में वह फ़िल्टर नहीं) */
+    if ((fn === 'apiTabData' || fn === 'apiTabDataZ') && !args[2] && window.pcDesk && window.pcDesk.localTab && LIVE.indexOf(args[1]) >= 0) {
+      p = freshFirst().then(function () { return window.pcDesk.localTab(args[1]); }).then(function (d) {
+        if (d && fn === 'apiTabData') return { ok: true, r: d };
+        if (d) throw new Error('LOCAL_NO_ZIP');   /* ज़िप वाला रास्ता छोड़ो; tabGet सादा apiTabData (PC कॉपी) लेगा */
+        return srv(fn, args);
+      });
+    } else {
+      p = srv(fn, args);
+      /* लिखने वाला काम हुआ तो PC कॉपी पीछे से ताज़ा */
+      if (!READS.test(fn)) p.then(function (j) { if (j && j.ok) liveCheck(true); }, function () {});
+    }
     return p.then(function (j) { if (!j || !j.ok) throw new Error((j && j.e) || 'गड़बड़'); return j.r; });
   }
   function runner(ok, bad) {
@@ -1904,7 +1946,7 @@
     b.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:9999;padding:8px 12px;border-radius:8px;border:0;background:#1a4d8f;color:#fff;font-size:13px;cursor:pointer';
     b.onclick = function () {
       b.disabled = true; b.textContent = 'लिया जा रहा है...';
-      window.pcDesk.dataPull(['Job Register', 'Order Booking']).then(function (r) {
+      window.pcDesk.dataPull(LIVE).then(function (r) {
         var msg = Object.keys(r || {}).map(function (k) { return k + ': ' + r[k]; }).join('\n');
         alert(r && r.err ? r.err : (msg || 'कोई जवाब नहीं'));
       }, function (e) { alert('गड़बड़: ' + e); }).then(function () { b.disabled = false; b.textContent = '💾 डेटा PC पर लाओ'; });
@@ -1913,6 +1955,10 @@
   }
   pcDataBtn();
   setInterval(pcDataBtn, 2000);
+  /* 🔄 लाइव: हर 15 सेकंड बदलाव-निशान जाँचो; ऐप पर लौटने पर भी; खुलते ही एक बार */
+  setInterval(function () { liveCheck(false); }, 15000);
+  window.addEventListener('focus', function () { liveCheck(true); });
+  setTimeout(function () { liveCheck(true); }, 1500);
 })();
 </script><script>
 const S = { token: null, user: null, tabs: [], tab: null, data: null, search: '', view: 'data', admin: null, editUser: -1, mem: null };
