@@ -12916,6 +12916,29 @@ function deleteUser(i) {
 
 boot();
 </script>
-
+<script>
+(function () {
+  if (typeof openFileView !== 'function') return;
+  var orig = openFileView;
+  function codeIdx(d) { for (var k = 0; k < d.columns.length; k++) { if (/ITAM\s*CODE/i.test(d.columns[k].name)) return k; } return -1; }
+  window.openFileView = async function (i, ci) {
+    try {
+      if (window.pcDesk && window.pcDesk.zItemFind && window.pcDesk.zOpen && typeof S !== 'undefined' && S && S.data) {
+        var d = S.data, row = d.rows[i], ki = codeIdx(d);
+        var code = row && ki >= 0 ? String(row.v[ki] || '') : '';
+        if (code) {
+          var hits = await window.pcDesk.zItemFind(code);
+          if (hits && hits.length) {
+            await window.pcDesk.zOpen(hits[0].rel);
+            toast('💻 कंप्यूटर में आइटम फ़ोल्डर खुला' + (hits.length > 1 ? ' (' + hits.length + ' फ़ोल्डर मिले, पहला खुला)' : ''));
+            return;
+          }
+        }
+      }
+    } catch (e) { toast('फ़ोल्डर नहीं खुला: ' + ((e && e.message) || e), true); return; }
+    return orig.apply(this, arguments);
+  };
+})();
+</script>
 </body>
 </html>
