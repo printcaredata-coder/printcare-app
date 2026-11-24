@@ -1886,10 +1886,13 @@
       if (typeof S !== 'undefined' && S && S.view === 'data' && tabs.indexOf(S.tab) >= 0 && typeof loadTab === 'function') { S.full = null; loadTab({ refresh: true }); }
     } catch (e) {}
   }
+  /* PC कॉपी तभी: अपना लॉगिन हो, "दूसरे यूज़र के रूप में" या वर्कस्पेस (WS) न हो */
+  function skipLocal() { return typeof S !== 'undefined' && S && (S.asUser || (typeof WS !== 'undefined' && WS)); }
+  function who() { return (typeof S !== 'undefined' && S && S.token && S.user) ? { token: S.token, user: S.user.username } : null; }
   function liveCheck(force) {
-    if (!window.pcDesk || !window.pcDesk.tabCheck) return Promise.resolve(null);
+    if (!window.pcDesk || !window.pcDesk.tabCheck || skipLocal()) return Promise.resolve(null);
     if (!force && checkP) return checkP;
-    checkP = window.pcDesk.tabCheck(LIVE).then(function (r) {
+    checkP = window.pcDesk.tabCheck(LIVE, who()).then(function (r) {
       checkP = null;
       if (r && !r.err) lastCheck = Date.now();
       if (r && r.changed && r.changed.length) refreshOpen(r.changed);
@@ -1899,7 +1902,7 @@
   }
   /* पढ़ने से पहले ताज़ा जाँच (8 सेकंड तक); हाल में जाँची हो तो सीधे कॉपी */
   function freshFirst() {
-    if (!window.pcDesk || !window.pcDesk.tabCheck) return Promise.resolve();
+    if (!window.pcDesk || !window.pcDesk.tabCheck || skipLocal()) return Promise.resolve();
     var p = checkP || (Date.now() - lastCheck < 10000 ? null : liveCheck(true));
     if (!p) return Promise.resolve();
     return Promise.race([p, new Promise(function (res) { setTimeout(res, 8000); })]);
@@ -1907,8 +1910,8 @@
   function call(fn, args) {
     var p;
     /* तारीख वाला फ़िल्टर (args[2]) हो तो सर्वर से ही (PC कॉपी में वह फ़िल्टर नहीं) */
-    if ((fn === 'apiTabData' || fn === 'apiTabDataZ') && !args[2] && window.pcDesk && window.pcDesk.localTab && LIVE.indexOf(args[1]) >= 0) {
-      p = freshFirst().then(function () { return window.pcDesk.localTab(args[1]); }).then(function (d) {
+    if ((fn === 'apiTabData' || fn === 'apiTabDataZ') && !args[2] && !skipLocal() && window.pcDesk && window.pcDesk.localTab && LIVE.indexOf(args[1]) >= 0) {
+      p = freshFirst().then(function () { return window.pcDesk.localTab(args[1], who()); }).then(function (d) {
         if (d && fn === 'apiTabData') return { ok: true, r: d };
         if (d) throw new Error('LOCAL_NO_ZIP');   /* ज़िप वाला रास्ता छोड़ो; tabGet सादा apiTabData (PC कॉपी) लेगा */
         return srv(fn, args);
@@ -1946,7 +1949,7 @@
     b.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:9999;padding:8px 12px;border-radius:8px;border:0;background:#1a4d8f;color:#fff;font-size:13px;cursor:pointer';
     b.onclick = function () {
       b.disabled = true; b.textContent = 'लिया जा रहा है...';
-      window.pcDesk.dataPull(LIVE).then(function (r) {
+      window.pcDesk.dataPull(LIVE, who()).then(function (r) {
         var msg = Object.keys(r || {}).map(function (k) { return k + ': ' + r[k]; }).join('\n');
         alert(r && r.err ? r.err : (msg || 'कोई जवाब नहीं'));
       }, function (e) { alert('गड़बड़: ' + e); }).then(function () { b.disabled = false; b.textContent = '💾 डेटा PC पर लाओ'; });
