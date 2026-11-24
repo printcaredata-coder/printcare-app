@@ -13070,6 +13070,65 @@ boot();
     return origApi.apply(this, arguments);
   };
 })();
+/* 🚫 डेस्कटॉप: "डाउनलोड" वाले बटन छिपाओ; फ़ाइल सीधे कंप्यूटर (Z:) से खुले, डाउनलोड करके नहीं */
+(function () {
+  if (!window.pcDesk || !window.pcDesk.zItemFind || !window.pcDesk.zbOpen) return;
+  function hideDl(root) {
+    (root || document).querySelectorAll('button,a').forEach(function (b) {
+      var t = (b.textContent || '').trim();
+      if (/^⬇/.test(t) || /Download/i.test(t) || /डाउनलोड/.test(t)) b.style.display = 'none';
+    });
+  }
+  var pend = false;
+  function schedule() { if (pend) return; pend = true; requestAnimationFrame(function () { pend = false; hideDl(document); }); }
+  hideDl(document);
+  if (document.body) new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+  async function zFindByName(code, name) {
+    if (!code || !name) return null;
+    var hits = await window.pcDesk.zItemFind(code);
+    if (!hits || !hits.length) return null;
+    var base = 'ALL CLIENT/' + hits[0].rel;
+    var L = await window.pcDesk.zDir(base);
+    var m = ((L && L.ents) || []).find(function (e) { return !e.d && e.n === name; });
+    return m ? base + '/' + m.n : null;
+  }
+  /* "🖥 Open on computer": PC के Z: की फ़ाइल सीधे खोलो; न मिले तो डाउनलोड नहीं — सिर्फ़ सूचना */
+  var origDl = window.iwDl;
+  if (typeof origDl === 'function') window.iwDl = async function (open) {
+    if (open && typeof S !== 'undefined' && S && S.bk && S.bk.iwF) {
+      var name = S.bk.iwF.name;
+      try {
+        var p = await zFindByName(S.bk.code, name);
+        if (p) { await window.pcDesk.zbOpen(p); toast('🖥 कंप्यूटर में खुल रही है: ' + name); return; }
+      } catch (e) {}
+      toast('यह फ़ाइल इस कंप्यूटर (Z:) में नहीं मिली — ऐप इसे डाउनलोड नहीं करेगी', true);
+      return;
+    }
+    return origDl.apply(this, arguments);
+  };
+  /* जॉब विंडो की दूसरी फ़ाइलें (Tara / कवर / अंदर): नाम मिले तो PC से पढ़ो, वरना पुराना रास्ता */
+  var origShow = window.iwShow;
+  if (typeof origShow === 'function') window.iwShow = async function (slot) {
+    try {
+      var B = typeof S !== 'undefined' && S ? S.bk : null, code = B && B.code, isH = String(slot).indexOf('h|') === 0;
+      if (code && !isH && slot !== 'jr') {
+        var f = ((iwT().files || {})[slot]) || {};
+        var p = f.name ? await zFindByName(code, f.name) : null;
+        if (p) {
+          var box = document.getElementById('iwPrev'), head = document.getElementById('iwRh');
+          if (box) box.innerHTML = '<div class="muted small">फ़ाइल PC से खुल रही है…</div>';
+          var bytes = await window.pcDesk.zbRead(p);
+          var u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+          var mime = /\.pdf$/i.test(f.name) ? 'application/pdf' : '';
+          var F = { name: f.name, mime: mime, bytes: u8, blob: new Blob([u8], { type: mime }) };
+          if (box && S.bk === B) { B.iwF = F; await renderFileInto(box, F); if (head) head.innerHTML = esc(F.name); }
+          return;
+        }
+      }
+    } catch (e) { /* नीचे पुराना रास्ता */ }
+    return origShow.apply(this, arguments);
+  };
+})();
 </script>
 </body>
 </html>
