@@ -13107,21 +13107,28 @@ boot();
     return origDl.apply(this, arguments);
   };
   /* जॉब विंडो की दूसरी फ़ाइलें (Tara / कवर / अंदर): नाम मिले तो PC से पढ़ो, वरना पुराना रास्ता */
+  /* "फ़ाइल देखें": PC पर वही फ़ाइल उसी PDF प्रोग्राम में खुले, जैसे Explorer से खोलने पर — सबसे तेज़, सब जगह एक जैसा */
+  async function zFirstPdf(code) {
+    var hits = await window.pcDesk.zItemFind(code);
+    if (!hits || !hits.length) return null;
+    var base = 'ALL CLIENT/' + hits[0].rel;
+    var L = await window.pcDesk.zDir(base);
+    var pdfs = ((L && L.ents) || []).filter(function (e) { return !e.d && /\.pdf$/i.test(e.n); }).sort(function (a, b) { return String(a.n).localeCompare(String(b.n)); });
+    return pdfs.length ? { name: pdfs[0].n, path: base + '/' + pdfs[0].n } : null;
+  }
   var origShow = window.iwShow;
   if (typeof origShow === 'function') window.iwShow = async function (slot) {
     try {
       var B = typeof S !== 'undefined' && S ? S.bk : null, code = B && B.code, isH = String(slot).indexOf('h|') === 0;
-      if (code && !isH && slot !== 'jr') {
-        var f = ((iwT().files || {})[slot]) || {};
-        var p = f.name ? await zFindByName(code, f.name) : null;
-        if (p) {
+      if (code && !isH) {
+        var hit = null;
+        if (slot === 'jr') { var zp = await zFirstPdf(code); if (zp) hit = { name: zp.name, path: zp.path }; }
+        else { var f = ((iwT().files || {})[slot]) || {}; var pp = f.name ? await zFindByName(code, f.name) : null; if (pp) hit = { name: f.name, path: pp }; }
+        if (hit) {
           var box = document.getElementById('iwPrev'), head = document.getElementById('iwRh');
-          if (box) box.innerHTML = '<div class="muted small">फ़ाइल PC से खुल रही है…</div>';
-          var bytes = await window.pcDesk.zbRead(p);
-          var u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-          var mime = /\.pdf$/i.test(f.name) ? 'application/pdf' : '';
-          var F = { name: f.name, mime: mime, bytes: u8, blob: new Blob([u8], { type: mime }) };
-          if (box && S.bk === B) { B.iwF = F; await renderFileInto(box, F); if (head) head.innerHTML = esc(F.name); }
+          await window.pcDesk.zbOpen(hit.path);
+          if (box && S.bk === B) box.innerHTML = '<div class="muted small" style="padding:20px">🖥 <b>' + esc(hit.name) + '</b> — कंप्यूटर के PDF प्रोग्राम में खुल गई।</div>';
+          if (head) head.innerHTML = esc(hit.name);
           return;
         }
       }
