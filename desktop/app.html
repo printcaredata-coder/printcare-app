@@ -13044,6 +13044,31 @@ boot();
     return orig.apply(this, arguments);
   };
 })();
+/* ⚡ डेस्कटॉप: रो खोलना और काम (वर्कफ़्लो) अब PC के डेटा से — सर्वर कॉल (~4 सेकंड) नहीं.
+   रो: PC की JR कॉपी में पूरी रो (वैल्यू, लिंक, तारीख, नंबर) है; फ़ॉर्मूला वाले कॉलम तय हैं।
+   सेव के समय सर्वर फिर भी मिलाता है (पुरानी वैल्यू से बदली हो तो रोकता है)। */
+(function () {
+  if (!window.pcDesk) return;
+  var FORM = /^(ITAM CODE|CATEGORY|ITEM COST)$/i;
+  var origFresh = window.freshRow;
+  if (typeof origFresh === 'function') window.freshRow = async function (i) {
+    var d = S.data;
+    if (d && d.tab === 'Job Register' && d.rows && d.rows[i] && !d.rows[i].f && d.rows[i].v && d.rows[i].l && d.rows[i].t && d.rows[i].n) {
+      var r = d.rows[i];
+      r.f = d.columns.map(function (c) { return FORM.test(String(c.name).trim()); });
+      return r;
+    }
+    return origFresh.apply(this, arguments);
+  };
+  var origApi = window.api;
+  if (typeof origApi === 'function') window.api = async function (fn) {
+    if (fn === 'apiGetWorkflowFull' && typeof S !== 'undefined' && S && S.loc && S.loc.wf) {
+      var k = String(arguments[2] || '').trim().toLowerCase(), w = S.loc.wf[k];
+      if (w) return JSON.parse(JSON.stringify(w));
+    }
+    return origApi.apply(this, arguments);
+  };
+})();
 </script>
 </body>
 </html>
