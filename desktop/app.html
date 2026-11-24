@@ -1941,6 +1941,7 @@
   window.open = function (u) { if (window.pcDesk && u) window.pcDesk.openExternal(String(u)); return null; };
   /* 💾 डेस्कटॉप में: सर्वर का डेटा PC पर (D:\Print Care Data\data) — सिर्फ़ डेस्कटॉप में दिखता है */
   function pcDataBtn() {
+    return; /* 💾 "डेटा PC पर लाओ" बटन हटाया (अब डेटा अपने-आप ताज़ा होता है) */
     if (!window.pcDesk || !window.pcDesk.dataPull || !document.body) return;
     if (document.getElementById('pcDataBtn')) return;
     var b = document.createElement('button');
