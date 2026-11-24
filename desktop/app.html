@@ -13022,6 +13022,28 @@ boot();
     return r;
   };
 })();
+/* ⚡ डेस्कटॉप: आइटम की फ़ाइल (जॉब विंडो का PDF) अब PC के Z: फ़ोल्डर से सीधे पढ़ी जाती है — सर्वर से टुकड़ों में नहीं */
+(function () {
+  if (!window.pcDesk || !window.pcDesk.zItemFind || !window.pcDesk.zbRead) return;
+  var orig = window.fetchItemFile;
+  if (typeof orig !== 'function') return;
+  window.fetchItemFile = async function (code, onProg) {
+    try {
+      var hits = await window.pcDesk.zItemFind(code);
+      if (hits && hits.length) {
+        var base = 'ALL CLIENT/' + hits[0].rel;
+        var L = await window.pcDesk.zDir(base);
+        var pdfs = ((L && L.ents) || []).filter(function (e) { return !e.d && /\.pdf$/i.test(e.n); }).sort(function (a, b) { return String(a.n).localeCompare(String(b.n)); });
+        if (pdfs.length) {
+          var bytes = await window.pcDesk.zbRead(base + '/' + pdfs[0].n);
+          var u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+          return { name: pdfs[0].n, mime: 'application/pdf', bytes: u8, blob: new Blob([u8], { type: 'application/pdf' }) };
+        }
+      }
+    } catch (e) { /* नीचे सर्वर वाला रास्ता */ }
+    return orig.apply(this, arguments);
+  };
+})();
 </script>
 </body>
 </html>
