@@ -1895,9 +1895,11 @@
   window.PC_DESK = true;
   window.open = function (u) { if (window.pcDesk && u) window.pcDesk.openExternal(String(u)); return null; };
   /* 💾 डेस्कटॉप में: सर्वर का डेटा PC पर (D:\Print Care Data\data) — सिर्फ़ डेस्कटॉप में दिखता है */
-  window.addEventListener('DOMContentLoaded', function () {
-    if (!window.pcDesk || !window.pcDesk.dataPull) return;
+  function pcDataBtn() {
+    if (!window.pcDesk || !window.pcDesk.dataPull || !document.body) return;
+    if (document.getElementById('pcDataBtn')) return;
     var b = document.createElement('button');
+    b.id = 'pcDataBtn';
     b.textContent = '💾 डेटा PC पर लाओ';
     b.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:9999;padding:8px 12px;border-radius:8px;border:0;background:#1a4d8f;color:#fff;font-size:13px;cursor:pointer';
     b.onclick = function () {
@@ -1908,7 +1910,9 @@
       }, function (e) { alert('गड़बड़: ' + e); }).then(function () { b.disabled = false; b.textContent = '💾 डेटा PC पर लाओ'; });
     };
     document.body.appendChild(b);
-  });
+  }
+  pcDataBtn();
+  setInterval(pcDataBtn, 2000);
 })();
 </script><script>
 const S = { token: null, user: null, tabs: [], tab: null, data: null, search: '', view: 'data', admin: null, editUser: -1, mem: null };
