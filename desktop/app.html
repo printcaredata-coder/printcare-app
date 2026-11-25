@@ -13175,7 +13175,7 @@ boot();
     + '.pcl-left > .pcl-hd,.pcl-right > .pcl-hd{flex:0 0 auto;margin:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}'
     + '.pcl-right > .pcl-hd{justify-content:flex-end;}'
     + '.pcl-left > .iw2-foot{position:sticky;bottom:0;z-index:3;box-shadow:0 -4px 12px rgba(15,23,42,.06);}'
-    + '#offAllW:has(#offAll:empty){display:none !important;}'
+    + '.pcl-left #offAllW:has(#offAll:empty){display:none !important;}'
     + '.pcl-right > .iw2-card.pv{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}'
     + '.pcl-right > .iw2-card.pv .iw-pv{flex:1 1 auto;min-height:0;height:auto;overflow:auto;}'
     + '#zPanel{flex:0 0 auto;margin:0 !important;}'
@@ -13257,10 +13257,11 @@ boot();
   var pend = false;
   function sweep() {
     pend = false;
-    document.querySelectorAll('.iw2').forEach(function (r) { if (r.getAttribute('data-pc-lay') !== '1') lay(r); });
+    /* सिर्फ़ आइटम वाली खिड़की (#modalBody) — ऑर्डर बुकिंग का पेज (.sp-card.bk) अपने पुराने लेआउट में रहे */
+    document.querySelectorAll('#modalBody .iw2').forEach(function (r) { if (r.getAttribute('data-pc-lay') !== '1') lay(r); });
     attachZ();
     /* "बाईं तरफ़ / नीचे किसी फाइल पर क्लिक करें" वाली लाइन छिपाओ (फ़ाइल आ जाए तो उसका नाम दिखे) */
-    var rh = document.getElementById('iwRh');
+    var rh = document.querySelector('#modalBody #iwRh');
     if (rh) rh.style.display = /क्लिक करें/.test(rh.textContent || '') ? 'none' : '';
   }
   function kick() { if (!pend) { pend = true; requestAnimationFrame(sweep); } }
