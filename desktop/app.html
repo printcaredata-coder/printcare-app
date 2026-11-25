@@ -13186,7 +13186,9 @@ boot();
     + '.pcl-vtop{padding:0 0 6px;}'
     + '.pcl-vbot{padding-top:6px;}'
     + '.pcl-admin{flex:0 0 auto;display:flex;gap:8px;flex-wrap:wrap;padding:4px 2px 2px;}'
-    + '.zf-nm{cursor:pointer;text-decoration:underline;color:#1d4ed8;}';
+    + '.zf-nm{cursor:pointer;text-decoration:underline;color:#1d4ed8;}'
+    + '.pcl-ico{min-width:0;padding:4px 9px !important;font-size:16px;line-height:1;position:relative;}'
+    + '.pcl-ico:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);right:0;background:#15284b;color:#fff;padding:4px 8px;border-radius:6px;font-size:12px;line-height:1.2;white-space:nowrap;z-index:20;pointer-events:none;}';
   var st = document.getElementById('pcLayCss');
   if (!st) { st = document.createElement('style'); st.id = 'pcLayCss'; st.textContent = css; document.head.appendChild(st); }
   function lay(root) {
@@ -13219,7 +13221,7 @@ boot();
       if (pvh) Array.prototype.slice.call(pvh.querySelectorAll('button')).forEach(function (b) {
         var t = b.textContent || '';
         if (/पूरी स्क्रीन/.test(t)) vtop.appendChild(b);
-        else if (/Open on computer/.test(t)) vbot.appendChild(b);
+        else if (/Open on computer/.test(t)) { b.textContent = '🖥'; b.removeAttribute('title'); b.setAttribute('data-tip', 'Open on computer'); b.className = b.className + ' pcl-ico'; vbot.appendChild(b); }
       });
       var xb = hR.querySelector('.iw2-x'); if (xb) vtop.appendChild(xb);
       pv.insertBefore(vtop, pv.firstChild);
