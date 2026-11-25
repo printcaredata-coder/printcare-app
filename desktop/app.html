@@ -13148,7 +13148,7 @@ boot();
   };
 })();
 /* 🪟 डेस्कटॉप: जॉब विंडो का लेआउट (सिर्फ़ डेस्कटॉप ऐप; वेब ऐप नहीं बदलती).
-   बायाँ आधा: बैक/कोड/कैटेगरी, जॉब, प्रिंट, कैलकुलेशन, फ़ाइलें — और सबसे नीचे कंप्यूटर (Z:) की फ़ाइलें; यह हिस्सा स्क्रॉल होता है.
+   बायाँ आधा: बैक/कोड/कैटेगरी, जॉब, प्रिंट, कैलकुलेशन, फ़ाइलें, कंप्यूटर (Z:) की फ़ाइलें — और सबसे नीचे MRP/Save बार (चिपका हुआ); यह हिस्सा स्क्रॉल होता है.
    दायाँ आधा: कॉस्टिंग/वर्कफ़्लो/इतिहास/✕ के बटन ऊपर, नीचे PDF व्यू (पूरी ऊँचाई, स्थिर; अंदर PDF स्क्रॉल). */
 (function () {
   if (!window.pcDesk) return;
@@ -13158,6 +13158,8 @@ boot();
     + '.pcl-right{overflow-y:auto;overflow-x:hidden;}'
     + '.pcl-left > .pcl-hd,.pcl-right > .pcl-hd{flex:0 0 auto;margin:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}'
     + '.pcl-right > .pcl-hd{justify-content:flex-end;}'
+    + '.pcl-left > .iw2-foot{position:sticky;bottom:0;z-index:3;box-shadow:0 -4px 12px rgba(15,23,42,.06);}'
+    + '#offAllW:has(#offAll:empty){display:none !important;}'
     + '.pcl-right > .iw2-card.pv{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}'
     + '.pcl-right > .iw2-card.pv .iw-pv{flex:1 1 auto;min-height:0;height:auto;overflow:auto;}'
     + '#zPanel{flex:0 0 auto;margin:0 !important;}';
@@ -13184,15 +13186,18 @@ boot();
     if (iwR) Array.prototype.slice.call(iwR.children).forEach(function (k) {
       if (k.classList.contains('pv')) R.appendChild(k); else L.appendChild(k);
     });
+    /* MRP/Save वाला बार बायें हिस्से के सबसे नीचे (चिपका हुआ), उसके ऊपर फ़ाइलें और कंप्यूटर की फ़ाइलें */
+    var ft = L.querySelector(':scope > .iw2-foot'); if (ft) L.appendChild(ft);
     head.remove(); iw.remove();
     root.appendChild(L); root.appendChild(R);
     root.setAttribute('data-pc-lay', '1');
   }
-  /* कंप्यूटर (Z:) वाली फ़ाइलों की पट्टी हमेशा बायें हिस्से के सबसे नीचे */
+  /* कंप्यूटर (Z:) वाली फ़ाइलों की पट्टी बायें हिस्से में, MRP/Save बार के ठीक ऊपर */
   function attachZ() {
     var L = document.querySelector('.iw2[data-pc-lay="1"] > .pcl-left');
-    var zp = document.getElementById('zPanel');
-    if (L && zp && zp.parentNode !== L) L.appendChild(zp);
+    if (!L) return;
+    var ft = L.querySelector(':scope > .iw2-foot'), zp = document.getElementById('zPanel');
+    if (zp && (zp.parentNode !== L || zp.nextElementSibling !== (ft || null))) L.insertBefore(zp, ft || null);
   }
   var pend = false;
   function sweep() {
