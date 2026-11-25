@@ -13179,7 +13179,9 @@ boot();
     + '.pcl-right > .iw2-card.pv{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}'
     + '.pcl-right > .iw2-card.pv .iw-pv{flex:1 1 auto;min-height:0;height:auto;overflow:auto;}'
     + '#zPanel{flex:0 0 auto;margin:0 !important;}'
-    + '.pcl-right > .pcl-hd{display:none !important;}'
+    + '.pcl-right > .pcl-hd{display:flex !important;justify-content:flex-end;background:transparent !important;box-shadow:none;padding:0 0 4px;}'
+    + '.pcl-right > .iw2-card.pv{position:relative;}'
+    + '.pcl-ov{position:absolute;right:12px;bottom:56px;z-index:6;}'
     + '.pcl-right .iw2-pvh{display:none !important;}'
     + '.pcl-hd .iw2-hb.w{display:none !important;}'
     + '.pcl-vtop,.pcl-vbot{flex:0 0 auto;display:flex;justify-content:flex-end;align-items:center;gap:6px;flex-wrap:wrap;}'
@@ -13188,7 +13190,13 @@ boot();
     + '.pcl-admin{flex:0 0 auto;display:flex;gap:8px;flex-wrap:wrap;padding:4px 2px 2px;}'
     + '.zf-nm{cursor:pointer;text-decoration:underline;color:#1d4ed8;}'
     + '.pcl-ico{min-width:0;padding:4px 9px !important;font-size:16px;line-height:1;position:relative;}'
-    + '.pcl-ico:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);right:0;background:#15284b;color:#fff;padding:4px 8px;border-radius:6px;font-size:12px;line-height:1.2;white-space:nowrap;z-index:20;pointer-events:none;}';
+    + '.pcl-ico:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);right:0;background:#15284b;color:#fff;padding:4px 8px;border-radius:6px;font-size:12px;line-height:1.2;white-space:nowrap;z-index:20;pointer-events:none;}'
+    + '.pcl-xtop,.pcl-xbot{position:absolute;z-index:6;display:flex;gap:6px;align-items:center;}'
+    + '.pcl-xtop{top:8px;right:8px;}'
+    + '.pcl-xbot{bottom:8px;right:10px;}'
+    + '.pcl-wm{background:rgba(255,255,255,.55) !important;color:rgba(71,85,105,.6) !important;border:1px solid rgba(148,163,184,.5) !important;box-shadow:none !important;opacity:.7;}'
+    + '.pcl-wm:hover{opacity:1;}'
+    + '.pcl-wm-round{border-radius:50% !important;width:30px;height:30px;padding:0 !important;display:inline-flex !important;align-items:center;justify-content:center;font-size:14px;}';
   var st = document.getElementById('pcLayCss');
   if (!st) { st = document.createElement('style'); st.id = 'pcLayCss'; st.textContent = css; document.head.appendChild(st); }
   function lay(root) {
@@ -13208,24 +13216,26 @@ boot();
     L.appendChild(hL);
     var iwL = iw.querySelector(':scope > .iw-left'), iwR = iw.querySelector(':scope > .iw-right');
     if (iwL) Array.prototype.slice.call(iwL.children).forEach(function (k) { L.appendChild(k); });
-    R.appendChild(hR);
+    /* दायें ऊपर की खाली पट्टी नहीं — ✕ नीचे व्यू के कोने में जाएगा */
     if (iwR) Array.prototype.slice.call(iwR.children).forEach(function (k) {
       if (k.classList.contains('pv')) R.appendChild(k); else L.appendChild(k);
     });
     /* MRP/Save वाला बार बायें हिस्से के सबसे नीचे (चिपका हुआ), उसके ऊपर फ़ाइलें और कंप्यूटर की फ़ाइलें */
     /* दायाँ: ✕ और पूरी स्क्रीन PDF व्यू के ऊपर-दायें कोने में; Open on computer नीचे-दायें (पुराना हेडर छिपा) */
+    /* PDF व्यू के अंदर हल्के वाटरमार्क बटन: ऊपर-दायें ✕ (गोल), नीचे-दायें ⛶ पूरी स्क्रीन + 🖥 (कंप्यूटर) */
     var pv = R.querySelector(':scope > .iw2-card.pv');
     if (pv) {
-      var pvh = pv.querySelector(':scope > .iw2-pvh'), vtop = document.createElement('div'), vbot = document.createElement('div');
-      vtop.className = 'pcl-vtop'; vbot.className = 'pcl-vbot';
+      var pvh = pv.querySelector(':scope > .iw2-pvh'), xt = document.createElement('div'), xbt = document.createElement('div');
+      xt.className = 'pcl-xtop'; xbt.className = 'pcl-xbot';
+      var xbtn = hR.querySelector('.iw2-x');
+      if (xbtn) { xbtn.classList.add('pcl-wm', 'pcl-wm-round'); xt.appendChild(xbtn); }
       if (pvh) Array.prototype.slice.call(pvh.querySelectorAll('button')).forEach(function (b) {
         var t = b.textContent || '';
-        if (/पूरी स्क्रीन/.test(t)) vtop.appendChild(b);
-        else if (/Open on computer/.test(t)) { b.textContent = '🖥'; b.removeAttribute('title'); b.setAttribute('data-tip', 'Open on computer'); b.className = b.className + ' pcl-ico'; vbot.appendChild(b); }
+        if (/पूरी स्क्रीन/.test(t)) { b.classList.add('pcl-wm'); xbt.appendChild(b); }
+        else if (/Open on computer/.test(t)) { b.textContent = '🖥'; b.removeAttribute('title'); b.setAttribute('data-tip', 'Open on computer'); b.className = b.className + ' pcl-ico pcl-wm pcl-wm-round'; xbt.appendChild(b); }
       });
-      var xb = hR.querySelector('.iw2-x'); if (xb) vtop.appendChild(xb);
-      pv.insertBefore(vtop, pv.firstChild);
-      pv.appendChild(vbot);
+      pv.appendChild(xt);
+      pv.appendChild(xbt);
     }
     /* MRP/Save बार बायें हिस्से के सबसे नीचे (चिपका हुआ) */
     var ft = L.querySelector(':scope > .iw2-foot'); if (ft) L.appendChild(ft);
@@ -13249,6 +13259,9 @@ boot();
     pend = false;
     document.querySelectorAll('.iw2').forEach(function (r) { if (r.getAttribute('data-pc-lay') !== '1') lay(r); });
     attachZ();
+    /* "बाईं तरफ़ / नीचे किसी फाइल पर क्लिक करें" वाली लाइन छिपाओ (फ़ाइल आ जाए तो उसका नाम दिखे) */
+    var rh = document.getElementById('iwRh');
+    if (rh) rh.style.display = /क्लिक करें/.test(rh.textContent || '') ? 'none' : '';
   }
   function kick() { if (!pend) { pend = true; requestAnimationFrame(sweep); } }
   if (document.body) new MutationObserver(kick).observe(document.body, { childList: true, subtree: true });
