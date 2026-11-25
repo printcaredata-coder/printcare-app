@@ -12954,7 +12954,7 @@ boot();
       var r = rel + '/' + e.n;
       return e.d
         ? '<div class="zf-r"><button class="btn sm" data-zact="go" data-rel="' + eh(r) + '">📁 ' + eh(e.n) + '</button></div>'
-        : '<div class="zf-r"><span>📄 ' + eh(e.n) + '</span> <span class="muted small">' + sz(e.s) + '</span> <button class="btn sm primary" data-zact="open" data-rel="' + eh(r) + '">📂 खोलो</button> <button class="btn sm" data-zact="show" data-rel="' + eh(r) + '">💻 फ़ोल्डर में दिखाओ</button></div>';
+        : '<div class="zf-r"><span class="zf-nm" data-zact="view" data-rel="' + eh(r) + '" title="क्लिक करें — यहीं दिखे">📄 ' + eh(e.n) + '</span> <span class="muted small">' + sz(e.s) + '</span> <button class="btn sm primary" data-zact="open" data-rel="' + eh(r) + '">📂 खोलो</button> <button class="btn sm" data-zact="show" data-rel="' + eh(r) + '">💻 फ़ोल्डर में दिखाओ</button></div>';
     }).join('');
     return '<div class="zf-top"><div class="muted small">' + eh(rel) + '</div>' + (parent ? '<button class="btn sm" data-zact="go" data-rel="' + eh(parent) + '">⬆ ऊपर</button> ' : '') + '<button class="btn sm" data-zact="openfolder" data-rel="' + eh(rel) + '">🗂 Explorer में खोलो</button></div>' + (list || '<div class="muted">इस फ़ोल्डर में कुछ नहीं</div>');
   }
@@ -12982,6 +12982,21 @@ boot();
       return zfShow(ZR + hits[0].rel);
     }).catch(function (e) { var b = document.getElementById('zfBox'); if (b) b.innerHTML = '<div class="muted">गड़बड़: ' + eh((e && e.message) || e) + '</div>'; });
   }
+  /* PC की फ़ाइल पर क्लिक: PDF हो तो उसी दाईं व्यू-विंडो में (PC से पढ़कर); बाकी फ़ाइलें PC के प्रोग्राम में */
+  async function showZIn(rel) {
+    var B = typeof S !== 'undefined' && S ? S.bk : null, prev = document.getElementById('iwPrev');
+    if (!B || !prev || !/\.pdf$/i.test(rel)) { await window.pcDesk.zbOpen(rel); return; }
+    prev.innerHTML = '<div class="muted small" style="padding:20px">फ़ाइल खुल रही है…</div>';
+    var raw = await window.pcDesk.zbRead(rel), u8 = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+    var nm = rel.split('/').pop();
+    var F = { name: nm, mime: 'application/pdf', bytes: u8, blob: new Blob([u8], { type: 'application/pdf' }) };
+    var box = document.getElementById('iwPrev');
+    if (S.bk !== B || !box) return;
+    B.iwF = F;
+    await renderFileInto(box, F);
+    var np = S.pdf && S.pdf.doc ? S.pdf.doc.numPages : 0, rh = document.getElementById('iwRh');
+    if (rh) rh.innerHTML = esc(nm) + (np ? ' · ' + np + ' पेज' : '');
+  }
   /* फ़ोल्डर के बटन: अंदर जाओ / खोलो / फ़ोल्डर में दिखाओ / Explorer में खोलो */
   document.addEventListener('click', async function (ev) {
     var b = ev.target && ev.target.closest ? ev.target.closest('[data-zact]') : null;
@@ -12990,6 +13005,7 @@ boot();
     ev.preventDefault();
     try {
       if (act === 'go') await zfShow(rel);
+      else if (act === 'view') await showZIn(rel);
       else if (act === 'open' || act === 'openfolder') await window.pcDesk.zbOpen(rel);
       else if (act === 'show') await window.pcDesk.zbShow(rel);
     } catch (e) { toast('गड़बड़: ' + ((e && e.message) || e), true); }
@@ -13162,7 +13178,15 @@ boot();
     + '#offAllW:has(#offAll:empty){display:none !important;}'
     + '.pcl-right > .iw2-card.pv{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}'
     + '.pcl-right > .iw2-card.pv .iw-pv{flex:1 1 auto;min-height:0;height:auto;overflow:auto;}'
-    + '#zPanel{flex:0 0 auto;margin:0 !important;}';
+    + '#zPanel{flex:0 0 auto;margin:0 !important;}'
+    + '.pcl-right > .pcl-hd{display:none !important;}'
+    + '.pcl-right .iw2-pvh{display:none !important;}'
+    + '.pcl-hd .iw2-hb.w{display:none !important;}'
+    + '.pcl-vtop,.pcl-vbot{flex:0 0 auto;display:flex;justify-content:flex-end;align-items:center;gap:6px;flex-wrap:wrap;}'
+    + '.pcl-vtop{padding:0 0 6px;}'
+    + '.pcl-vbot{padding-top:6px;}'
+    + '.pcl-admin{flex:0 0 auto;display:flex;gap:8px;flex-wrap:wrap;padding:4px 2px 2px;}'
+    + '.zf-nm{cursor:pointer;text-decoration:underline;color:#1d4ed8;}';
   var st = document.getElementById('pcLayCss');
   if (!st) { st = document.createElement('style'); st.id = 'pcLayCss'; st.textContent = css; document.head.appendChild(st); }
   function lay(root) {
@@ -13187,7 +13211,26 @@ boot();
       if (k.classList.contains('pv')) R.appendChild(k); else L.appendChild(k);
     });
     /* MRP/Save वाला बार बायें हिस्से के सबसे नीचे (चिपका हुआ), उसके ऊपर फ़ाइलें और कंप्यूटर की फ़ाइलें */
+    /* दायाँ: ✕ और पूरी स्क्रीन PDF व्यू के ऊपर-दायें कोने में; Open on computer नीचे-दायें (पुराना हेडर छिपा) */
+    var pv = R.querySelector(':scope > .iw2-card.pv');
+    if (pv) {
+      var pvh = pv.querySelector(':scope > .iw2-pvh'), vtop = document.createElement('div'), vbot = document.createElement('div');
+      vtop.className = 'pcl-vtop'; vbot.className = 'pcl-vbot';
+      if (pvh) Array.prototype.slice.call(pvh.querySelectorAll('button')).forEach(function (b) {
+        var t = b.textContent || '';
+        if (/पूरी स्क्रीन/.test(t)) vtop.appendChild(b);
+        else if (/Open on computer/.test(t)) vbot.appendChild(b);
+      });
+      var xb = hR.querySelector('.iw2-x'); if (xb) vtop.appendChild(xb);
+      pv.insertBefore(vtop, pv.firstChild);
+      pv.appendChild(vbot);
+    }
+    /* MRP/Save बार बायें हिस्से के सबसे नीचे (चिपका हुआ) */
     var ft = L.querySelector(':scope > .iw2-foot'); if (ft) L.appendChild(ft);
+    /* Costing / Workflow / पूरी रो — Save बार के नीचे, बायें हिस्से में */
+    var adm = document.createElement('div'); adm.className = 'pcl-admin';
+    Array.prototype.slice.call(hR.querySelectorAll('.iw2-hb:not(.w)')).forEach(function (b) { adm.appendChild(b); });
+    if (adm.children.length) L.appendChild(adm);
     head.remove(); iw.remove();
     root.appendChild(L); root.appendChild(R);
     root.setAttribute('data-pc-lay', '1');
