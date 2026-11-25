@@ -13125,16 +13125,84 @@ boot();
         if (slot === 'jr') { var zp = await zFirstPdf(code); if (zp) hit = { name: zp.name, path: zp.path }; }
         else { var f = ((iwT().files || {})[slot]) || {}; var pp = f.name ? await zFindByName(code, f.name) : null; if (pp) hit = { name: f.name, path: pp }; }
         if (hit) {
-          var box = document.getElementById('iwPrev'), head = document.getElementById('iwRh');
-          await window.pcDesk.zbOpen(hit.path);
-          if (box && S.bk === B) box.innerHTML = '<div class="muted small" style="padding:20px">🖥 <b>' + esc(hit.name) + '</b> — कंप्यूटर के PDF प्रोग्राम में खुल गई।</div>';
-          if (head) head.innerHTML = esc(hit.name);
+          /* PDF हो तो उसी दाईं व्यू-विंडो में (PC की फ़ाइल PC से पढ़कर) — बाकी फ़ाइलें PC के प्रोग्राम में */
+          if (!/\.pdf$/i.test(hit.name)) {
+            await window.pcDesk.zbOpen(hit.path);
+            var bx = document.getElementById('iwPrev');
+            if (bx && S.bk === B) bx.innerHTML = '<div class="muted small" style="padding:20px">🖥 <b>' + esc(hit.name) + '</b> — कंप्यूटर में खुल गई (यह PDF नहीं है, इसलिए यहाँ नहीं दिखती)।</div>';
+            return;
+          }
+          var raw = await window.pcDesk.zbRead(hit.path), u8 = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+          var F = { name: hit.name, mime: 'application/pdf', bytes: u8, blob: new Blob([u8], { type: 'application/pdf' }) };
+          if (S.bk === B && document.getElementById('iwPrev')) {
+            B.iwF = F;
+            await renderFileInto(document.getElementById('iwPrev'), F);
+            var np = S.pdf && S.pdf.doc ? S.pdf.doc.numPages : 0;
+            if (document.getElementById('iwRh')) document.getElementById('iwRh').innerHTML = esc(F.name) + (np ? ' · ' + np + ' पेज' : '');
+          }
           return;
         }
       }
     } catch (e) { /* नीचे पुराना रास्ता */ }
     return origShow.apply(this, arguments);
   };
+})();
+/* 🪟 डेस्कटॉप: जॉब विंडो का लेआउट (सिर्फ़ डेस्कटॉप ऐप; वेब ऐप नहीं बदलती).
+   बायाँ आधा: बैक/कोड/कैटेगरी, जॉब, प्रिंट, कैलकुलेशन, फ़ाइलें — और सबसे नीचे कंप्यूटर (Z:) की फ़ाइलें; यह हिस्सा स्क्रॉल होता है.
+   दायाँ आधा: कॉस्टिंग/वर्कफ़्लो/इतिहास/✕ के बटन ऊपर, नीचे PDF व्यू (पूरी ऊँचाई, स्थिर; अंदर PDF स्क्रॉल). */
+(function () {
+  if (!window.pcDesk) return;
+  var css = '.iw2[data-pc-lay="1"]{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;grid-template-rows:minmax(0,1fr) !important;gap:12px !important;overflow:hidden !important;}'
+    + '.pcl-left,.pcl-right{min-height:0;min-width:0;display:flex;flex-direction:column;gap:10px;}'
+    + '.pcl-left{overflow-y:auto;overflow-x:hidden;padding-right:6px;}'
+    + '.pcl-right{overflow-y:auto;overflow-x:hidden;}'
+    + '.pcl-left > .pcl-hd,.pcl-right > .pcl-hd{flex:0 0 auto;margin:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}'
+    + '.pcl-right > .pcl-hd{justify-content:flex-end;}'
+    + '.pcl-right > .iw2-card.pv{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}'
+    + '.pcl-right > .iw2-card.pv .iw-pv{flex:1 1 auto;min-height:0;height:auto;overflow:auto;}'
+    + '#zPanel{flex:0 0 auto;margin:0 !important;}';
+  var st = document.getElementById('pcLayCss');
+  if (!st) { st = document.createElement('style'); st.id = 'pcLayCss'; st.textContent = css; document.head.appendChild(st); }
+  function lay(root) {
+    if (window.innerWidth < 900) return;
+    var head = root.querySelector(':scope > .iw2-head'), iw = root.querySelector(':scope > .iw');
+    if (!head || !iw) return;
+    var L = document.createElement('div'), R = document.createElement('div');
+    L.className = 'pcl-left'; R.className = 'pcl-right';
+    var hL = document.createElement('div'), hR = document.createElement('div');
+    hL.className = 'iw2-head pcl-hd'; hR.className = 'iw2-head pcl-hd';
+    var kids = Array.prototype.slice.call(head.children), sp = -1;
+    kids.forEach(function (k, i) { if (sp < 0 && k.classList.contains('iw2-sp')) sp = i; });
+    kids.forEach(function (k, i) {
+      if (i === sp) return;
+      if (sp >= 0 && i > sp) hR.appendChild(k); else hL.appendChild(k);
+    });
+    L.appendChild(hL);
+    var iwL = iw.querySelector(':scope > .iw-left'), iwR = iw.querySelector(':scope > .iw-right');
+    if (iwL) Array.prototype.slice.call(iwL.children).forEach(function (k) { L.appendChild(k); });
+    R.appendChild(hR);
+    if (iwR) Array.prototype.slice.call(iwR.children).forEach(function (k) {
+      if (k.classList.contains('pv')) R.appendChild(k); else L.appendChild(k);
+    });
+    head.remove(); iw.remove();
+    root.appendChild(L); root.appendChild(R);
+    root.setAttribute('data-pc-lay', '1');
+  }
+  /* कंप्यूटर (Z:) वाली फ़ाइलों की पट्टी हमेशा बायें हिस्से के सबसे नीचे */
+  function attachZ() {
+    var L = document.querySelector('.iw2[data-pc-lay="1"] > .pcl-left');
+    var zp = document.getElementById('zPanel');
+    if (L && zp && zp.parentNode !== L) L.appendChild(zp);
+  }
+  var pend = false;
+  function sweep() {
+    pend = false;
+    document.querySelectorAll('.iw2').forEach(function (r) { if (r.getAttribute('data-pc-lay') !== '1') lay(r); });
+    attachZ();
+  }
+  function kick() { if (!pend) { pend = true; requestAnimationFrame(sweep); } }
+  if (document.body) new MutationObserver(kick).observe(document.body, { childList: true, subtree: true });
+  kick();
 })();
 </script>
 </body>
