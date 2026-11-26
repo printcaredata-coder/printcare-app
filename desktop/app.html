@@ -5418,6 +5418,18 @@ function bkQAdd(label, type, data) {
   S.bkQ.push(t); bkQDraw(); if (t.st === 'wait') bkQRun();
   return t;
 }
+/* 📝 ड्राफ़्ट का JOB NUMBER सर्वर पर रिज़र्व (पीछे से): नंबर 272 → 271 नहीं होता, दो ड्राफ़्ट एक नंबर नहीं लेते */
+function bkResv_(t) {
+  const d = t.data || {}; if (!d.rid) return;
+  api('apiReserveJob', S.token, 'Order Booking', d.rid).then(r => {
+    if (!r || !r.job) return;
+    if (!S.bkQ.some(x => x === t) || t.st !== 'draft') { api('apiReleaseJob', S.token, d.rid).catch(() => {}); return; }
+    d.job = String(r.job); t.label = t.label.replace(/JOB ~\d+/, 'JOB ' + d.job);
+    S.nextJob = String(r.next);
+    if ($('spJob')) $('spJob').innerHTML = '🔢 अगला ऑर्डर नंबर: <b>' + esc(S.nextJob) + '</b>';
+    qSave(); bkQDraw();
+  }).catch(() => {});
+}
 async function qExec(t) {
   const d = t.data || {};
   if (t.type === 'fn') return t.fn();
@@ -5430,6 +5442,7 @@ async function qExec(t) {
 async function qDropBad() {
   const bad = S.bkQ.filter(x => x.st === 'bad'); if (!bad.length) return;
   if (!(await askYes('🗑 ये ' + bad.length + ' बदलाव मिटाने हैं? (सर्वर पर कुछ नहीं बदलेगा)\n' + bad.map(x => x.label).join('\n'), 'हाँ, मिटाओ'))) return;
+  bad.forEach(x => { if (x.type === 'book' && x.data && x.data.rid) api('apiReleaseJob', S.token, x.data.rid).catch(() => {}); });
   S.bkQ = S.bkQ.filter(x => x.st !== 'bad'); bkQDraw(); toast('🗑 हटाया — अब लाल पट्टी नहीं आएगी');
 }
 /* पुराना ड्राफ़्ट (सर्वर हमेशा मना करेगा) — अपने-आप हटा दो */
@@ -5441,6 +5454,7 @@ async function qDropOne(id) {
   const t = S.bkQ.find(x => x.id === id); if (!t) return;
   if (!(await askYes('🗑 ये बदलाव हटाना है? (सर्वर पर नहीं जाएगा)\n' + t.label, 'हाँ, हटाओ'))) return;
   if (t.type === 'row' && t.data && t.data.before && S.data && S.data.tab === t.data.tab) { putRow(t.data.before, t.data.r); compute(); }
+  if (t.type === 'book' && t.data && t.data.rid) api('apiReleaseJob', S.token, t.data.rid).catch(() => {});
   S.bkQ = S.bkQ.filter(x => x.id !== id); bkQDraw(); toast('🗑 हटाया — ' + t.label); openQueue();
 }
 function closeQueueBox() { const b = $('qBox'); if (b) b.remove(); }
@@ -5516,7 +5530,9 @@ async function bkBook() {
   /* 📝 ड्राफ़्ट / ⏳ लाइव — कतार */
   if (sc === 'order' && Object.keys(cols).length) { const mm = (S.qtyMem || (S.qtyMem = {}))[code]; if (mm) mm.unshift({ q: String(n0(q)), job: expect || '?', note: why, vals: Object.assign({}, ch) }); }
   S.bkQmHit = null;
-  bkQAdd('📝 ऑर्डर ' + (expect ? 'JOB ~' + expect + ' · ' : '') + code, 'book', { code, q, note, expect, day, sc, rateRow, cols, orig, why, off: S.bkOffNow || null });
+  const rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const qt = bkQAdd('📝 ऑर्डर ' + (expect ? 'JOB ~' + expect + ' · ' : '') + code, 'book', { code, q, note, expect, day, sc, rateRow, cols, orig, why, off: S.bkOffNow || null, rid });
+  if (qt.st === 'draft') bkResv_(qt);
 }
 /* कतार से: ऑर्डर सर्वर पर (क्लाइंट रेट पहले, फिर Order Booking की रो) */
 async function bkExec(d) {
@@ -5526,7 +5542,7 @@ async function bkExec(d) {
   const M = S.bkOB || (S.bkOB = await api('apiItemOpen', S.token, 'Order Booking', '')), col = n => { const c = M.columns.find(x => bkN(x.name) === n); return c ? c.name : null; }, vals = {};
   const put = (n, v) => { const k = col(n); if (k && String(v).trim() !== '') vals[k] = String(v).trim(); };
   put('DATE', day); put('ITAM CODE', code); put('QTY', q); put('EXTRA DETAL', note);
-  const nr = await api('apiAddRow', S.token, M.tab, vals);
+  const nr = await api('apiAddRow', S.token, M.tab, vals, d.rid || '', d.job ? Number(d.job) : '');
   const ji = M.columns.findIndex(c => bkN(c.name) === 'JOB NUMBER'), job = nr && ji >= 0 ? String(nr.v[ji] || '').trim() : (nr && nr.jobNo) || '';
   if (sc === 'order' && job) { const ov = {}; Object.keys(cols).forEach(k => { ov[k.trim()] = cols[k]; }); await api('apiBillOverrideJob', S.token, job, code, ov, d.why || '', q); }
   if (d.off && job) { if (d.off.cost != null) await api('apiBillOverrideJob', S.token, job, code, { 'ITEM COST': String(d.off.cost) }, d.off.why || '', ''); await api('apiOrderSheets', S.token, job, code, d.off.sheets, d.off.cost); if (d.off.prt && Object.keys(d.off.prt).length) await api('apiQtyRemember', S.token, code, job, d.off.oq || q, d.off.prt, d.off.why || ''); }
@@ -5884,7 +5900,7 @@ function iwFileHtml(slot) {
   let nm = '<span class="muted small">⬜ फाइल नहीं लगी</span>';
   if (f) nm = `<button type="button" class="iw-fn" onclick="iwShow('${slot}')">📄 ${esc(f.name)}</button>`;
   else if (slot === 'inner' && B.jrFile && B.jrFile.id) nm = `<button type="button" class="iw-fn" onclick="iwShow('jr')" title="Job Register में पहले से लगी">📄 ${esc(B.jrFile.name || 'पुरानी फाइल')}</button>`;
-  if (can && false) {   /* 📤 तारा / अंजलि को भेजो — बंद (मालिक 20-Nov) */
+  if (can) {   /* 📤 तारा / अंजलि को भेजो — बंद (मालिक 20-Nov) */
     const sent = w => (B.copies || []).find(c => c.who === w && c.slot === slot);
     const whoL = IW_TARA_SLOTS.indexOf(slot) >= 0 ? ['tara', 'anjali'] : ['anjali'], all = whoL.every(w => sent(w));
     const lbl = whoL.length > 1 ? 'तारा + अंजलि' : 'अंजलि';
