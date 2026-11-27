@@ -13297,6 +13297,36 @@ boot();
     else if (++tries > 600) clearInterval(t);
   }, 1000);
 })();
+/* 📋 DEMO EXP में पेस्ट (मालिक 27-Nov-2026): PC पर Copy की फ़ाइल → Ctrl+V या राइट-क्लिक Paste → Drive पर उसी फ़ोल्डर में */
+(function () {
+  if (!window.pcDesk || !window.pcDesk.clipFiles) return;
+  function atDemo() { return String(zdRel('')).replace(/\\/g, '/').toLowerCase() === 'all client/used/demo exp'; }
+  var zdPasteOrig = zdPaste;
+  zdPaste = async function (sub) {
+    if (!atDemo() || (S.zdClip && S.zdClip.items && S.zdClip.items.length)) return zdPasteOrig(sub);
+    var files = await window.pcDesk.clipFiles().catch(function () { return []; });
+    if (!files || !files.length) return toast('पहले PC पर फ़ाइल Copy करो (Ctrl+C), फिर यहाँ Paste करो', true);
+    toast('⏳ फ़ाइल Drive पर जा रही है…');
+    try {
+      var r = await window.pcDesk.demoPasteFiles(files, zdRel(''));
+      toast((r.n ? '✅ ' + r.n + ' फ़ाइल Drive पर डाली' : 'कुछ नहीं हुआ') + (r.errs.length ? ' · ❌ ' + r.errs.join(' · ') : ''), !!r.errs.length);
+    } catch (er) { fail(er); }
+    S.zd.sig = ''; renderZd(true);
+  };
+  var zdCmOrig = zdCm;
+  zdCm = function (ev, i) {
+    zdCmOrig(ev, i);
+    var m = document.getElementById('zdCm'); if (!m || i >= 0 || !atDemo()) return;
+    var btns = m.querySelectorAll('button.zd-mi');
+    for (var k = 0; k < btns.length; k++) { if (/Paste/.test(btns[k].textContent)) { btns[k].disabled = false; btns[k].setAttribute('onclick', 'zdCmHide();zdPaste()'); } }
+  };
+  document.addEventListener('keydown', function (e) {
+    if (!(e.ctrlKey || e.metaKey) || String(e.key || '').toLowerCase() !== 'v') return;
+    if (S.view !== 'zdrive' || !atDemo()) return;
+    var t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
+    e.preventDefault(); zdPaste();
+  });
+})();
 </script>
 </body>
 </html>
