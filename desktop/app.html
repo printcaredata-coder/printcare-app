@@ -2536,10 +2536,11 @@ function drawNav() {
   n.innerHTML = `<div class="side-logo">${logo(36)}<span class="si-tx">${WS === 'cj' ? '🧸 <b>ClapJoy</b>' : 'Print <b>Care</b>'}</span></div>` +
     mobItems().filter(x => x.k !== 'settings').map(x => item(x.k.indexOf('tab:') === 0 ? S.view === 'data' && S.tab === x.k.slice(4) : S.view === x.k, String(x.ic).indexOf('<') === 0 || String(x.ic).length > 4 ? x.ic : '<span class="nav-emo">' + x.ic + '</span>', x.k === 'stock' ? 'स्टॉक नोट' : x.t, x.go)).join('') +
     (S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna') ? item(false, '<span class="nav-emo">🕘</span>', 'हाज़िरी', 'attOpen()') : '') +
+    (dwOn() ? item(S.view === 'drive', '<span class="nav-emo">☁</span>', 'Drive: ALL CLIENT', "setView('drive')") : '') +
     (zdOn() ? item(S.view === 'zdrive', '<span class="nav-emo">🗂</span>', 'Z: ड्राइव', "setView('zdrive')") : fsCan() && !bkpOnly() ? item(S.view === 'files', '<span class="nav-emo">📁</span>', 'सारे क्लाइंट', "setView('files')") : '') +
     '<div class="side-gap"></div>' + (setTimeout(swNag, 3000), setTimeout(taraSyncStart, 3000), '') + (S.user && (S.user.simple || bkpOnly()) ? '' :
     item(S.view === 'settings' || S.view === 'users', navIc('icon-settings', '⚙️'), 'ऐप सेटिंग', "setView('settings')"));
-  const titles = { files: '📁 सारे क्लाइंट', zdrive: '🗂 Z: ड्राइव', home: '🏠 होम', settings: '⚙️ ऐप सेटिंग', users: '👥 यूज़र और परमिशन', prod: '🏭 प्रोडक्शन — आज क्या बाकी', buy: '🧾 Workflow — खरीद / बाहर / घर', rates: '📒 रेट मास्टर — हर काम का रेट एक जगह', stock: '📦 स्टॉक नोट — तारा फैक्ट्री' };
+  const titles = { files: '📁 सारे क्लाइंट', zdrive: '🗂 Z: ड्राइव', home: '🏠 होम', settings: '⚙️ ऐप सेटिंग', users: '👥 यूज़र और परमिशन', prod: '🏭 प्रोडक्शन — आज क्या बाकी', buy: '🧾 Workflow — खरीद / बाहर / घर', rates: '📒 रेट मास्टर — हर काम का रेट एक जगह', stock: '📦 स्टॉक नोट — तारा फैक्ट्री', drive: '☁ Drive: ALL CLIENT' };
   if ($('pageTitle') && !(S.view === 'data' && $('pageTitle').querySelector('#tb2'))) $('pageTitle').innerHTML = S.view === 'data' ? tabIcon(S.tab) + ' ' + esc(S.tab) : (titles[S.view] || '');
   { const tb = $('topBack'); if (tb) tb.style.display = (S.view === 'home' && !(S.bk && S.bk.code) && !modalOpen()) ? 'none' : ''; }
   drawMobNav(); drawBell();
@@ -2603,6 +2604,7 @@ async function setView(v) {
   drawNav();
   if (v === 'zdrive' && !zdOn()) v = 'files';
   if (v === 'zdrive') return renderZd();
+  if (v === 'drive') return dwRender();
   if (v === 'files') return zdOn() ? (S.view = 'zdrive', renderZd()) : renderFs();
   if (S.user && S.user.simple) {
     if (!(v === 'buy' || (v === 'data' && (S.tabs || []).indexOf(S.tab) >= 0))) {   /* Workflow / Billing — सिर्फ नए ऑर्डर (सर्वर छाँटता है) */
@@ -5027,6 +5029,7 @@ function allLaunch() {
   if (S.procMeta && S.procMeta.see && !(S.user && S.user.design)) (typeof BUY_PAGES !== 'undefined' ? BUY_PAGES : []).forEach(p => it.push({ k: 'bp:' + p[0], ic: String(p[1]).split(' ')[0], t: String(p[1]).replace(/^\S+\s/, ''), go: "buyOpen('" + p[0] + "')" }));
   if (S.user && !S.asUser && (S.user.role === 'Admin' || String(S.user.username || '').toLowerCase() === 'bhavna')) it.push({ k: 'att', ic: '🕘', t: 'हाज़िरी', go: 'attOpen()' });
   if (zdOn()) it.push({ k: 'zdrive', ic: '🗂', t: 'Z: ड्राइव', go: "setView('zdrive')" });
+  if (dwOn()) it.push({ k: 'drive', ic: '☁', t: 'Drive: ALL CLIENT', go: "setView('drive')" });
   it.push({ k: 'install', ic: '📲', t: 'ऐप इंस्टॉल करें', go: 'appInstall()' });
   if (S.user && S.user.role === 'Admin' && !S.asUser) it.push({ k: 'rr', ic: '📂', t: 'Review Required', go: 'openRR()' });
   if (pcWho()) it.push({ k: 'pcsetup', ic: '🖥', t: 'कंप्यूटर सेटअप', go: 'pcSetupDlg()' });
@@ -6363,7 +6366,7 @@ async function bkNewSave() {
 function simpleItems() {
   /* मालिक 15-Nov: होम = 📝 बुकिंग; बाएँ से Job Register / Order Booking / Workflow / Billing की शीट (सिर्फ नई रो) */
   const tab = t => (S.tabs || []).indexOf(t) >= 0 ? [{ k: 'tab:' + t, ic: tabIcon(t), t: t, go: 'selectTab(' + S.tabs.indexOf(t) + ')' }] : [];
-  return [{ k: 'home', ic: navIc('icon-home', '🏠'), t: 'होम — नया ऑर्डर', go: "setView('home')" }].concat(tab('Job Register'), tab('Order Booking'), [{ k: 'buy', ic: '🧾', t: 'Workflow', go: "buyOpen('')" }], tab('Billing'), bkpOk() ? [{ k: 'bkp', ic: '📖', t: 'तारा का बुक प्रिंटिंग', go: "setView('bkp')" }] : [], [{ k: 'pw', ic: '🔑', t: 'पासवर्ड', go: "setView('pw')" }]);
+  return [{ k: 'home', ic: navIc('icon-home', '🏠'), t: 'होम — नया ऑर्डर', go: "setView('home')" }].concat(tab('Job Register'), tab('Order Booking'), [{ k: 'buy', ic: '🧾', t: 'Workflow', go: "buyOpen('')" }], tab('Billing'), bkpOk() ? [{ k: 'bkp', ic: '📖', t: 'तारा का बुक प्रिंटिंग', go: "setView('bkp')" }] : [], dwOn() ? [{ k: 'drive', ic: '☁', t: 'Drive: ALL CLIENT', go: "setView('drive')" }] : [], [{ k: 'pw', ic: '🔑', t: 'पासवर्ड', go: "setView('pw')" }]);
 }
 /* 🕘 हाज़िरी (मालिक 19-Nov): नितिन / भावना के लिए बिना दूसरे लॉगिन; बाकी स्टाफ के लिए लॉगिन पेज से स्टाफ पन्ना */
 const ATT_STAFF_URL = 'https:' + String.fromCharCode(47, 47) + 'script.google.com' + String.fromCharCode(47) + 'macros' + String.fromCharCode(47) + 's' + String.fromCharCode(47) + 'AKfycbwBTQW5lubr-XJn8DVWjY11eRvLLJszASeDPmX26B_LH1M6oFlnczYaZNw7AlgGg-AFaQ' + String.fromCharCode(47) + 'exec?view=staff';
@@ -7565,7 +7568,7 @@ function zdDraw() {
     + '<input id="zdQ" class="fs-q" placeholder="🔍 इस फ़ोल्डर में खोजें" value="' + esc(Z.q || '') + '" oninput="zdSt().q=this.value;clearTimeout(S.zdT);S.zdT=setTimeout(zdQDraw,200)">'
     + '<button class="btn sm" onclick="zdFolder()" title="Windows के फ़ोल्डर में खोलो">📂 फ़ोल्डर खोलो</button><button class="btn sm" onclick="renderZd()" title="ताज़ा करो">🔄</button></div>'
     + '<div class="zd-hd">' + th('n', 'नाम') + th('d', 'बदलने की तारीख') + th('t', 'प्रकार') + th('s', 'साइज़') + '<span></span></div>'
-    + (L.length ? '<div class="fs-rows zd-rows">' + L.map((e, i) => '<div class="fs-row zd-row' + (Z.sels && Z.sels[e.n] ? ' sel' : '') + '" onclick="zdPick(' + i + ',event)" ondblclick="zdOpen(' + i + ')" oncontextmenu="zdCm(event,' + i + ')"><span class="zd-n"><span class="zf-i">' + zdIco(e.n, e.d) + '</span><span class="fs-nm" title="' + esc(e.n) + '">' + esc(e.n) + '</span></span><span class="muted small zd-c">' + zdDt(e.m) + '</span><span class="muted small zd-c">' + esc(zdType(e.n, e.d)) + '</span><span class="muted small zd-c zd-s">' + (e.d ? '' : zdFmt(e.s)) + '</span><span class="zd-b">' + (e.d ? '' : '<button class="btn sm primary" onclick="event.stopPropagation();zdView(' + i + ')" title="यहीं देखो">👁</button><button class="btn sm" onclick="event.stopPropagation();zdOpen(' + i + ')" title="कंप्यूटर के प्रोग्राम में खोलो">📂 खोलो</button>') + '</span></div>').join('') + '</div>' : emptyArt('empty-files', Z.q ? 'कुछ नहीं मिला' : 'यह फ़ोल्डर खाली है'))
+    + (L.length ? '<div class="fs-rows zd-rows">' + L.map((e, i) => '<div class="fs-row zd-row' + (Z.sels && Z.sels[e.n] ? ' sel' : '') + '" onclick="zdPick(' + i + ',event)" ondblclick="zdOpen(' + i + ')" oncontextmenu="zdCm(event,' + i + ')"><span class="zd-n"><span class="zf-i">' + zdIco(e.n, e.d) + '</span><span class="fs-nm" title="' + esc(e.n) + '">' + esc(e.n) + '</span></span><span class="muted small zd-c">' + zdDt(e.m) + '</span><span class="muted small zd-c">' + esc(zdType(e.n, e.d)) + '</span><span class="muted small zd-c zd-s">' + (e.d ? '' : zdFmt(e.s) + (e.by ? ' · ' + esc(e.by) + ' ने सेव' : '')) + '</span><span class="zd-b">' + (e.d ? '' : '<button class="btn sm primary" onclick="event.stopPropagation();zdView(' + i + ')" title="यहीं देखो">👁</button><button class="btn sm" onclick="event.stopPropagation();zdOpen(' + i + ')" title="कंप्यूटर के प्रोग्राम में खोलो">📂 खोलो</button>') + '</span></div>').join('') + '</div>' : emptyArt('empty-files', Z.q ? 'कुछ नहीं मिला' : 'यह फ़ोल्डर खाली है'))
     + '<div class="muted small zd-ft">' + fmtNum(nf) + ' फ़ोल्डर · ' + fmtNum(nfile) + ' फ़ाइलें' + (Z.q ? ' (खोज)' : '') + ' · दो बार क्लिक = खुलेगा · राइट-क्लिक = और काम · नई फ़ाइल डालो तो अपने-आप दिखेगी</div></div>';
 }
 function zdQDraw() { const Z = zdSt(); zdDraw(); const qi = $('zdQ'); if (qi) { qi.focus(); try { qi.setSelectionRange(qi.value.length, qi.value.length); } catch (e) {} } }
@@ -13304,14 +13307,15 @@ boot();
   var zdPasteOrig = zdPaste;
   var dmPasting = false;
   zdPaste = async function (sub) {
-    if (!atDemo() || (S.zdClip && S.zdClip.items && S.zdClip.items.length)) return zdPasteOrig(sub);
+    if (!atDemo()) return zdPasteOrig(sub);
     var demoHere = false; try { demoHere = await window.pcDesk.demoOn(zdRel('')); } catch (e) { demoHere = false; }
     if (!demoHere) return zdPasteOrig(sub);   /* Z: जुड़ा हो तो पुराना पेस्ट वैसा ही */
     if (dmPasting) return;   /* एक Paste पर दो बार नहीं (दो अपलोड = दो एक जैसी फ़ाइलें) */
     dmPasting = true;
     try {
       var files = await window.pcDesk.clipFiles().catch(function () { return []; });
-      if (!files || !files.length) return toast('पहले PC पर फ़ाइल Copy करो (Ctrl+C), फिर यहाँ Paste करो', true);
+      if (!files || !files.length) return zdPasteOrig(sub);   /* ऐप के अंदर की Copy (या कुछ नहीं) */
+      S.zdClip = null;   /* PC की ताज़ा कॉपी ही जीती — ऐप की पुरानी कॉपी हटी */
       toast('⏳ फ़ाइल Drive पर जा रही है…');
       try {
         var r = await window.pcDesk.demoPasteFiles(files, zdRel(''));
@@ -13320,6 +13324,9 @@ boot();
       S.zd.sig = ''; renderZd(true);
     } finally { dmPasting = false; }
   };
+  /* ऐप में Copy/Cut हुआ तो PC के Clipboard की पुरानी फ़ाइलें हटाओ (वरना PC वाली पेस्ट में ढक जाती थी) */
+  var zdClipSetOrig = zdClipSet;
+  zdClipSet = function (move) { zdClipSetOrig(move); try { window.pcDesk.clipClear().catch(function () {}); } catch (e) {} };
   var zdCmOrig = zdCm;
   zdCm = function (ev, i) {
     zdCmOrig(ev, i);
@@ -13341,14 +13348,21 @@ boot();
   };
   /* ♻ Drive Bin से रिस्टोर (पूरा ALL CLIENT, ओरिजिनल जगह पर; 30 दिन के अंदर) + 💾 कैश की सीमा */
   window.dmBin = async function () {
-    var list, cache;
-    try { list = await window.pcDesk.demoTrashed(); cache = await window.pcDesk.demoCacheGet(); } catch (er) { return fail(er); }
+    var list, cache, drv;
+    try { list = await window.pcDesk.demoTrashed(); cache = await window.pcDesk.demoCacheGet(); drv = await window.pcDesk.driveModeGet(); } catch (er) { return fail(er); }
+    var drvLine = '<div style="margin-bottom:10px"><button class="btn sm' + (drv && drv.on ? ' primary' : '') + '" onclick="dmDrive()">☁ इस PC पर ALL CLIENT Drive से: ' + (drv && drv.on ? 'चालू (बंद करने के लिए दबाएँ)' : 'बंद (चालू करने के लिए दबाएँ)') + '</button><div class="muted small">चालू होने पर Z: जुड़ा हो तब भी ALL CLIENT Drive से खुलेगा।</div></div>';
     var sel = function (v) { return '<button class="btn sm' + (cache.gb === v ? ' primary' : '') + '" onclick="dmCache(' + v + ')">' + v + ' GB</button>'; };
     var head = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap"><span class="muted small">💾 कैश की सीमा (पुरानी साफ़ कैश फ़ाइलें अपने-आप हटेंगी):</span>' + sel(5) + sel(10) + sel(50) + '</div>';
     var rows = list.length ? list.map(function (f) {
       return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eee"><span style="flex:1;word-break:break-all">' + (f.folder ? '📁 ' : '') + esc(f.name) + '<br><span class="muted small">' + esc(f.rel) + '</span></span><button class="btn sm primary" onclick="dmRestore(&#39;' + esc(f.id) + '&#39;)">♻ रिस्टोर</button></div>';
     }).join('') : '<div class="empty">ALL CLIENT के Bin में कोई चीज़ नहीं (30 दिन तक रहती है)</div>';
-    openModal('♻ Drive Bin से रिस्टोर', head + '<div style="max-height:55vh;overflow:auto">' + rows + '</div><div class="actions" style="margin-top:12px"><button class="btn" onclick="closeModal()">बंद करें</button></div>');
+    openModal('♻ Drive Bin से रिस्टोर', drvLine + head +'<div style="max-height:55vh;overflow:auto">' + rows + '</div><div class="actions" style="margin-top:12px"><button class="btn" onclick="closeModal()">बंद करें</button></div>');
+  };
+  window.dmDrive = async function () {
+    var cur = false; try { cur = (await window.pcDesk.driveModeGet()).on; } catch (er) { cur = false; }
+    try { await window.pcDesk.driveModeSet(!cur); toast(!cur ? '☁ इस PC पर ALL CLIENT Drive से चालू' : 'Z: वाला ALL CLIENT वापस'); } catch (er) { fail(er); }
+    S.zd.sig = ''; renderZd(true);
+    window.dmBin();
   };
   window.dmCache = async function (gb) {
     try { var r = await window.pcDesk.demoCacheSet(gb); toast('💾 कैश की सीमा: ' + r.gb + ' GB'); } catch (er) { fail(er); }
@@ -13362,5 +13376,269 @@ boot();
   /* Ctrl+V की अलग listener नहीं: App.html की अपनी Ctrl+V ही zdPaste() चलाती है (पहले दो listener थीं = दो अपलोड) */
 })();
 </script>
+  <style>
+/* ☁ Drive: ALL CLIENT — फ़ोन और कंप्यूटर के अलग डिज़ाइन (27-Nov-2026) */
+.dw-page{max-width:1200px;margin:0 auto;padding:12px}
+.dw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.dw-crumbs{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.dw-tbl{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.dw-tbl th{text-align:left;font-size:13px;color:#64748b;font-weight:600;padding:9px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.dw-tbl td{padding:9px 10px;border-bottom:1px solid #f1f5f9;font-size:14px;vertical-align:middle}
+.dw-go{cursor:pointer}
+.dw-go:hover td{background:#eef4ff}
+.dw-m-head{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:5}
+.dw-back{border:0;background:#eef4ff;border-radius:10px;min-width:44px;min-height:44px;font-size:22px;cursor:pointer}
+.dw-m-title{font-size:18px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dw-m-path{font-size:12px;color:#64748b;padding:6px 12px;background:#f8fafc;overflow-x:auto;white-space:nowrap}
+.dw-m-row{display:flex;align-items:center;gap:10px;width:100%;min-height:60px;padding:10px 12px;border:0;border-bottom:1px solid #eef2f7;background:#fff;text-align:left;font-size:15px;cursor:pointer}
+.dw-m-row:active{background:#eef4ff}
+.dw-ic{font-size:22px;width:30px;text-align:center;flex:0 0 30px}
+.dw-txt{flex:1;min-width:0;display:flex;flex-direction:column}
+.dw-txt b{font-weight:600;word-break:break-word}
+.dw-sub{font-size:12px;color:#64748b;margin-top:2px}
+.dw-chev{font-size:22px;color:#94a3b8;flex:0 0 14px}
+.dw-m-list{padding-bottom:78px}
+.dw-m-bar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;padding:10px 12px;background:#fff;border-top:1px solid #e2e8f0;z-index:50}
+.dw-m-bar .btn{flex:1;min-height:46px;font-size:15px}
+</style>
+<script>
+/* ☁ Drive: ALL CLIENT (फ़ोन / ब्राउज़र से) — 27-Nov-2026, मालिक का आदेश.
+ * वही लॉगिन (नितिन, भावना, अंजलि); टोकन सर्वर (apiDemoAccess) से ~50 मिनट; फ़ाइलें सीधे Drive से।
+ * फ़ोन की कैश (IndexedDB): सीमा यूज़र चुनता है (0.5 / 1 / 2 / 5 GB); सीमा पार हो तो सबसे पुरानी कैश फ़ाइल हटती है।
+ * डिज़ाइन: फ़ोन (isMob) पर बड़ी पंक्तियाँ और नीचे का बटन-बार; कंप्यूटर पर टेबल जिसमें तारीख़, प्रकार, साइज़, किसने सेव।
+ * यह व्यू सिर्फ़ देखने, खोलने और फ़ोन में सेव करने के लिए है (फ़ोन से Drive पर बदलाव नहीं). */
+var DW_API = 'https:' + String.fromCharCode(47, 47) + 'www.googleapis.com/drive/v3';
+var DW_FOLDER = 'application/vnd.google-apps.folder';
+var DW_MAX_BYTES = 200 * 1048576;
+var DW_LIMITS = [0.5, 1, 2, 5];
+
+function dwMime(name) {
+  var e = String(name || '').split('.').pop().toLowerCase();
+  return { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', txt: 'text/plain' }[e] || 'application/octet-stream';
+}
+
+/* कोर: बिना DOM के (टेस्ट करने लायक). deps = { fetch, store, token, limitBytes, now } */
+function dwCreateCore(deps) {
+  var fetchFn = deps.fetch, store = deps.store, now = deps.now || function () { return Date.now(); };
+  var tokenFn = deps.token;
+  var tok = null, tokExp = 0, limit = deps.limitBytes || 1073741824;
+  var kids = {};
+  function auth() {
+    if (tok && now() < tokExp) return Promise.resolve(tok);
+    return tokenFn().then(function (r) { tok = r; tokExp = now() + Math.max(60, Number(r.expiresIn || 3000) - 180) * 1000; kids = {}; return r; });
+  }
+  function go(url, t) { return fetchFn(url, { headers: { Authorization: 'Bearer ' + t.token } }); }
+  function gfetch(url, asBytes) {
+    return auth().then(function (t) {
+      return go(url, t).then(function (r) {
+        if (r.status === 401) { tok = null; return auth().then(function (t2) { return go(url, t2); }); }
+        return r;
+      });
+    }).then(function (r) {
+      if (!r.ok) throw new Error('Drive ' + r.status);
+      return asBytes ? r.arrayBuffer().then(function (b) { return new Uint8Array(b); }) : r.json();
+    });
+  }
+  function children(pid) {
+    var c = kids[pid]; if (c && now() - c.at < 15000) return Promise.resolve(c.list);
+    var out = [];
+    function page(pt) {
+      var q = encodeURIComponent("'" + pid + "' in parents and trashed = false");
+      var f = encodeURIComponent('nextPageToken,files(id,name,mimeType,size,modifiedTime,appProperties)');
+      return gfetch(DW_API + '/files?q=' + q + '&fields=' + f + '&pageSize=1000' + (pt ? '&pageToken=' + encodeURIComponent(pt) : '')).then(function (j) {
+        (j.files || []).forEach(function (x) {
+          out.push({ id: x.id, name: x.name, folder: x.mimeType === DW_FOLDER, size: Number(x.size) || 0, mod: Date.parse(x.modifiedTime) || 0, by: (x.appProperties && x.appProperties.lastSavedBy) || '', parentId: pid });
+        });
+        if (j.nextPageToken) return page(j.nextPageToken);
+      });
+    }
+    return page('').then(function () { kids[pid] = { at: now(), list: out }; return out; });
+  }
+  function folderOf(segs) {
+    return auth().then(function (t) {
+      return segs.reduce(function (p, seg) {
+        return p.then(function (cur) {
+          return children(cur).then(function (l) {
+            var hit = l.filter(function (x) { return x.folder && x.name === seg; })[0];
+            if (!hit) throw new Error('फ़ोल्डर नहीं मिला: ' + seg);
+            return hit.id;
+          });
+        });
+      }, Promise.resolve(t.allClientId));
+    });
+  }
+  function list(segs) { return folderOf(segs).then(children); }
+  function evictTo(max) {
+    return store.all().then(function (all) {
+      var total = 0; all.forEach(function (r) { total += r.size || 0; });
+      all.sort(function (a, b) { return (a.last || 0) - (b.last || 0); });
+      var chain = Promise.resolve();
+      all.forEach(function (r) {
+        chain = chain.then(function () { if (total <= max) return; total -= r.size || 0; return store.del(r.id); });
+      });
+      return chain.then(function () { return total; });
+    });
+  }
+  function open(entry) {
+    if (entry.size > DW_MAX_BYTES) return Promise.reject(new Error('बड़ी फ़ाइल (200 MB से ऊपर) — डेस्कटॉप से खोलें'));
+    return store.get(entry.id).then(function (c) {
+      if (c && c.mod === entry.mod && c.bytes) {
+        c.last = now();
+        return store.put(c).then(function () { return { name: entry.name, mime: dwMime(entry.name), bytes: c.bytes, cached: true }; });
+      }
+      return gfetch(DW_API + '/files/' + encodeURIComponent(entry.id) + '?alt=media', true).then(function (bytes) {
+        var rec = { id: entry.id, name: entry.name, mod: entry.mod, size: bytes.length, bytes: bytes, last: now() };
+        var p = bytes.length <= limit ? evictTo(limit - bytes.length).then(function () { return store.put(rec); }) : Promise.resolve();
+        return p.then(function () { return { name: entry.name, mime: dwMime(entry.name), bytes: bytes, cached: false }; });
+      });
+    });
+  }
+  function stats() {
+    return store.all().then(function (all) {
+      var b = 0; all.forEach(function (r) { b += r.size || 0; });
+      return { files: all.length, bytes: b, limit: limit };
+    });
+  }
+  function setLimit(bytes) { limit = bytes; return evictTo(limit); }
+  function clear() {
+    return store.all().then(function (all) {
+      var c = Promise.resolve();
+      all.forEach(function (r) { c = c.then(function () { return store.del(r.id); }); });
+      return c;
+    });
+  }
+  return { list: list, folderOf: folderOf, open: open, stats: stats, setLimit: setLimit, clear: clear };
+}
+
+/* ब्राउज़र की कैश (IndexedDB) और बिना IndexedDB वाली याददाश्त */
+function dwMemStore() {
+  var m = {};
+  return {
+    get: function (id) { return Promise.resolve(m[id]); },
+    put: function (r) { m[r.id] = r; return Promise.resolve(); },
+    del: function (id) { delete m[id]; return Promise.resolve(); },
+    all: function () { return Promise.resolve(Object.keys(m).map(function (k) { return m[k]; })); }
+  };
+}
+function dwIdbStore() {
+  var dbp = null;
+  function db() {
+    if (dbp) return dbp;
+    dbp = new Promise(function (res, rej) {
+      var r = indexedDB.open('pcdrive', 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore('files', { keyPath: 'id' }); };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error); };
+    });
+    return dbp;
+  }
+  function tx(mode, fn) {
+    return db().then(function (d) {
+      return new Promise(function (res, rej) {
+        var t = d.transaction('files', mode), req = fn(t.objectStore('files'));
+        t.oncomplete = function () { res(req.result); };
+        t.onerror = function () { rej(t.error); };
+      });
+    });
+  }
+  return {
+    get: function (id) { return tx('readonly', function (s) { return s.get(id); }); },
+    put: function (r) { return tx('readwrite', function (s) { return s.put(r); }); },
+    del: function (id) { return tx('readwrite', function (s) { return s.delete(id); }); },
+    all: function () { return tx('readonly', function (s) { return s.getAll(); }); }
+  };
+}
+
+/* ---------- स्क्रीन: फ़ोन और कंप्यूटर के अलग डिज़ाइन ---------- */
+var DWS = { path: [], rows: [], core: null };
+function dwOn() { return !window.pcDesk && !!(S.user && !S.asUser && fsCan()); }
+function dwLimitGB() {
+  var v = 1; try { v = Number(localStorage.getItem('pcdrive.limitGB')) || 1; } catch (e) { v = 1; }
+  return DW_LIMITS.indexOf(v) >= 0 ? v : 1;
+}
+function dwToken() { return api('apiDemoAccess', S.token); }
+function dwCore() {
+  if (!DWS.core) DWS.core = dwCreateCore({ fetch: function (u, o) { return window.fetch(u, o); }, store: dwIdbStore(), token: dwToken, limitBytes: dwLimitGB() * 1073741824 });
+  return DWS.core;
+}
+function dwDate(ms) {
+  if (!ms) return '';
+  var d = new Date(ms), p = function (n) { return String(n).padStart(2, '0'); };
+  return p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function dwKind(name, folder) {
+  if (folder) return 'फ़ोल्डर';
+  var t = dwMime(name);
+  if (t === 'application/pdf') return 'PDF';
+  if (t.indexOf('image/') === 0) return 'फ़ोटो';
+  if (t === 'text/plain') return 'Text';
+  var n = String(name || ''), dot = n.lastIndexOf('.');
+  return dot > 0 ? n.slice(dot + 1).toUpperCase() : 'फ़ाइल';
+}
+async function dwRender() {
+  var m = $('main'); if (!m) return;
+  var segs = DWS.path.slice();
+  m.innerHTML = '<div class="loading">Drive से ला रहे हैं…</div>';
+  try {
+    var ents = await dwCore().list(segs);
+    DWS.rows = ents.slice().sort(function (a, b) { return (b.folder - a.folder) || a.name.localeCompare(b.name, 'hi'); });
+    m.innerHTML = isMob() ? dwPhone(segs) : dwDesk(segs);
+  } catch (er) { m.innerHTML = '<div class="empty">' + esc(er.message || er) + '</div>'; }
+}
+/* फ़ोन: बड़ी पंक्तियाँ, ऊपर वापस का तीर, नीचे बटन-बार */
+function dwPhone(segs) {
+  var back = segs.length ? '<button class="dw-back" onclick="dwUp(' + (segs.length - 2) + ')">‹</button>' : '';
+  var title = segs.length ? segs[segs.length - 1] : 'ALL CLIENT';
+  var trail = segs.length ? '<div class="dw-m-path">' + ['ALL CLIENT'].concat(segs).map(function (s) { return esc(s); }).join(' › ') + '</div>' : '';
+  var rows = DWS.rows.map(function (e, i) {
+    var sub = e.folder ? '' : [zdFmt(e.size), dwDate(e.mod), e.by ? e.by + ' ने सेव' : ''].filter(Boolean).join(' · ');
+    return '<button class="dw-m-row" onclick="' + (e.folder ? 'dwGo(' + i + ')' : 'dwFile(' + i + ')') + '"><span class="dw-ic">' + (e.folder ? '📁' : '📄') + '</span><span class="dw-txt"><b>' + esc(e.name) + '</b><span class="dw-sub">' + esc(sub) + '</span></span><span class="dw-chev">' + (e.folder ? '›' : '') + '</span></button>';
+  }).join('');
+  return '<div class="dw-m-head">' + back + '<div class="dw-m-title">' + esc(title) + '</div></div>' + trail +
+    '<div class="dw-m-list">' + (rows || '<div class="empty">यहाँ कुछ नहीं</div>') + '</div>' +
+    '<div class="dw-m-bar"><button class="btn" onclick="dwCacheDlg()">💾 फ़ोन की कैश</button><button class="btn" onclick="dwRefresh()">🔄 ताज़ा</button></div>';
+}
+/* कंप्यूटर: रास्ता ऊपर, टेबल में तारीख़, प्रकार, साइज़ और किसने सेव किया */
+function dwDesk(segs) {
+  var crumbs = '<button class="btn sm" onclick="dwUp(-1)">☁ ALL CLIENT</button>' + segs.map(function (s, i) { return ' <span class="muted">›</span> <button class="btn sm" onclick="dwUp(' + i + ')">' + esc(s) + '</button>'; }).join('');
+  var body = DWS.rows.map(function (e, i) {
+    return '<tr class="dw-go" onclick="' + (e.folder ? 'dwGo(' + i + ')' : 'dwFile(' + i + ')') + '"><td>' + (e.folder ? '📁 ' : '📄 ') + esc(e.name) + '</td><td>' + esc(dwDate(e.mod)) + '</td><td>' + esc(dwKind(e.name, e.folder)) + '</td><td>' + (e.folder ? '' : esc(zdFmt(e.size))) + '</td><td>' + esc(e.by || '—') + '</td></tr>';
+  }).join('');
+  return '<div class="dw-page"><div class="dw-top"><div class="dw-crumbs">' + crumbs + '</div><div><button class="btn sm" onclick="dwRefresh()">🔄 ताज़ा</button> <button class="btn sm" onclick="dwCacheDlg()">💾 फ़ोन / PC कैश</button></div></div>' +
+    (DWS.rows.length ? '<table class="dw-tbl"><thead><tr><th>नाम</th><th>बदली तारीख़</th><th>प्रकार</th><th>साइज़</th><th>किसने सेव किया</th></tr></thead><tbody>' + body + '</tbody></table>' : '<div class="empty">यहाँ कुछ नहीं</div>') + '</div>';
+}
+function dwGo(i) { var e = DWS.rows[i]; if (!e || !e.folder) return; DWS.path.push(e.name); dwRender(); }
+function dwUp(i) { DWS.path = i < 0 ? [] : DWS.path.slice(0, i + 1); dwRender(); }
+function dwRefresh() { DWS.core = null; dwRender(); }
+function dwSave(url, name) { var a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+async function dwFile(i) {
+  var e = DWS.rows[i]; if (!e || e.folder) return;
+  toast('⏳ Drive से ला रहे हैं…');
+  try {
+    var f = await dwCore().open(e);
+    var url = URL.createObjectURL(new Blob([f.bytes], { type: f.mime }));
+    if (f.mime === 'application/pdf' || f.mime.indexOf('image/') === 0 || f.mime === 'text/plain') {
+      var h = isMob() ? '70vh' : '80vh';
+      openModal(esc(e.name), '<div style="height:' + h + '"><iframe src="' + url + '" style="width:100%;height:100%;border:0"></iframe></div><div class="actions" style="margin-top:8px"><a class="btn primary" href="' + url + '" download="' + esc(e.name) + '">⬇ फ़ोन / PC में सेव</a></div>');
+    } else {
+      dwSave(url, e.name);
+      toast('⬇ सेव हुई: ' + e.name);
+    }
+  } catch (er) { fail(er); }
+}
+async function dwCacheDlg() {
+  var st = { files: 0, bytes: 0 }; try { st = await dwCore().stats(); } catch (e) {}
+  var cur = dwLimitGB();
+  var btns = DW_LIMITS.map(function (g) { return '<button class="btn sm' + (g === cur ? ' primary' : '') + '" onclick="dwSetLimit(' + g + ')">' + g + ' GB</button>'; }).join(' ');
+  openModal('💾 कैश की सीमा', '<div class="small">अभी: ' + st.files + ' फ़ाइलें · ' + zdFmt(st.bytes) + '</div><p class="small muted">सीमा पार होते ही सबसे पुरानी कैश फ़ाइल अपने-आप हटेगी। इस ' + (isMob() ? 'फ़ोन' : 'कंप्यूटर') + ' पर सिर्फ़ इतना ही डाटा रहेगा।</p><div style="display:flex;gap:6px;flex-wrap:wrap">' + btns + '</div><div class="actions" style="margin-top:12px"><button class="btn" onclick="dwClear()">🗑 कैश खाली करो</button><button class="btn" onclick="closeModal()">बंद करें</button></div>');
+}
+async function dwSetLimit(g) {
+  try { localStorage.setItem('pcdrive.limitGB', String(g)); } catch (e) {}
+  DWS.core = null; await dwCore().setLimit(g * 1073741824);
+  toast('💾 कैश सीमा ' + g + ' GB'); dwCacheDlg();
+}
+async function dwClear() { try { await dwCore().clear(); toast('🗑 कैश खाली'); } catch (er) { fail(er); } dwCacheDlg(); }
+</script>
+
 </body>
 </html>
