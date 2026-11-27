@@ -13300,11 +13300,13 @@ boot();
 /* 📋 DEMO EXP में पेस्ट (मालिक 27-Nov-2026): PC पर Copy की फ़ाइल → Ctrl+V या राइट-क्लिक Paste → Drive पर उसी फ़ोल्डर में */
 (function () {
   if (!window.pcDesk || !window.pcDesk.clipFiles) return;
-  function atDemo() { return String(zdRel('')).replace(/\\/g, '/').toLowerCase() === 'all client/used/demo exp'; }
+  function atDemo() { return String(zdRel('')).replace(/\\/g, '/').toLowerCase().indexOf('all client/') === 0; }   /* 27-Nov: पूरा ALL CLIENT (USED / UNUSED) Drive से */
   var zdPasteOrig = zdPaste;
   var dmPasting = false;
   zdPaste = async function (sub) {
     if (!atDemo() || (S.zdClip && S.zdClip.items && S.zdClip.items.length)) return zdPasteOrig(sub);
+    var demoHere = false; try { demoHere = await window.pcDesk.demoOn(zdRel('')); } catch (e) { demoHere = false; }
+    if (!demoHere) return zdPasteOrig(sub);   /* Z: जुड़ा हो तो पुराना पेस्ट वैसा ही */
     if (dmPasting) return;   /* एक Paste पर दो बार नहीं (दो अपलोड = दो एक जैसी फ़ाइलें) */
     dmPasting = true;
     try {
@@ -13337,14 +13339,20 @@ boot();
     var e = zdSelEnts()[0]; if (!e || e.d) return;
     try { await window.pcDesk.zbOpenWith(zdRel(e.n)); } catch (er) { fail(er); }
   };
-  /* ♻ DEMO EXP की Drive Bin से रिस्टोर (30 दिन के अंदर) */
+  /* ♻ Drive Bin से रिस्टोर (पूरा ALL CLIENT, ओरिजिनल जगह पर; 30 दिन के अंदर) + 💾 कैश की सीमा */
   window.dmBin = async function () {
-    var list;
-    try { list = await window.pcDesk.demoTrashed(); } catch (er) { return fail(er); }
+    var list, cache;
+    try { list = await window.pcDesk.demoTrashed(); cache = await window.pcDesk.demoCacheGet(); } catch (er) { return fail(er); }
+    var sel = function (v) { return '<button class="btn sm' + (cache.gb === v ? ' primary' : '') + '" onclick="dmCache(' + v + ')">' + v + ' GB</button>'; };
+    var head = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap"><span class="muted small">💾 कैश की सीमा (पुरानी साफ़ कैश फ़ाइलें अपने-आप हटेंगी):</span>' + sel(5) + sel(10) + sel(50) + '</div>';
     var rows = list.length ? list.map(function (f) {
-      return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eee"><span style="flex:1;word-break:break-all">' + esc(f.name) + ' <span class="muted small">· ' + zdFmt(f.size) + '</span></span><button class="btn sm primary" onclick="dmRestore(&#39;' + esc(f.id) + '&#39;)">♻ रिस्टोर</button></div>';
-    }).join('') : '<div class="empty">Drive के Bin में इस फ़ोल्डर की कोई फ़ाइल नहीं (30 दिन तक रहती है)</div>';
-    openModal('♻ Drive Bin से रिस्टोर', '<div style="max-height:60vh;overflow:auto">' + rows + '</div><div class="actions" style="margin-top:12px"><button class="btn" onclick="closeModal()">बंद करें</button></div>');
+      return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eee"><span style="flex:1;word-break:break-all">' + (f.folder ? '📁 ' : '') + esc(f.name) + '<br><span class="muted small">' + esc(f.rel) + '</span></span><button class="btn sm primary" onclick="dmRestore(&#39;' + esc(f.id) + '&#39;)">♻ रिस्टोर</button></div>';
+    }).join('') : '<div class="empty">ALL CLIENT के Bin में कोई चीज़ नहीं (30 दिन तक रहती है)</div>';
+    openModal('♻ Drive Bin से रिस्टोर', head + '<div style="max-height:55vh;overflow:auto">' + rows + '</div><div class="actions" style="margin-top:12px"><button class="btn" onclick="closeModal()">बंद करें</button></div>');
+  };
+  window.dmCache = async function (gb) {
+    try { var r = await window.pcDesk.demoCacheSet(gb); toast('💾 कैश की सीमा: ' + r.gb + ' GB'); } catch (er) { fail(er); }
+    window.dmBin();
   };
   window.dmRestore = async function (id) {
     try { var f = await window.pcDesk.demoRestore(id); toast('✅ वापस आ गई: ' + f.name); } catch (er) { fail(er); }
