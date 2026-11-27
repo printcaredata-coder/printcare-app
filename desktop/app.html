@@ -13284,6 +13284,19 @@ boot();
   if (document.body) new MutationObserver(kick).observe(document.body, { childList: true, subtree: true });
   kick();
 })();
+/* 🧪 DEMO (मालिक 27-Nov-2026): लॉगिन के बाद ऐप सर्वर से DEMO EXP का Drive टोकन लेकर डेस्कटॉप को देती है (40 मिनट पर नया) */
+(function () {
+  if (!window.pcDesk || !window.pcDesk.demoSet) return;
+  var tries = 0;
+  function refresh() {
+    if (typeof S === 'undefined' || !S || !S.token) return;
+    api('apiDemoAccess', S.token).then(function (r) { if (r && r.token) window.pcDesk.demoSet(r); }).catch(function () { window.pcDesk.demoSet(null); });
+  }
+  var t = setInterval(function () {
+    if (typeof S !== 'undefined' && S && S.token) { clearInterval(t); refresh(); setInterval(refresh, 40 * 60 * 1000); }
+    else if (++tries > 600) clearInterval(t);
+  }, 1000);
+})();
 </script>
 </body>
 </html>
