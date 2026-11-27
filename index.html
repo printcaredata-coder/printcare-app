@@ -207,6 +207,23 @@
     $('tbLang').onchange = function () { tell({ pc: 'barCmd', cmd: 'lang', v: $('tbLang').value }); };
     $('tbOut').onclick = function () { tell({ pc: 'barCmd', cmd: 'logout' }); };
   })();
+  /* ◁ फ़ोन का Back (मालिक 27-Nov): पेज पर एक इतिहास-कदम हमेशा रखा रहता है। Back दबने पर ऐप को "back" भेजते हैं — ऐप खुद एक कदम पीछे जाती है
+     (खिड़की → पिछला पेज → होम), और होम पर "बाहर जाना है?" पूछती है। बाहर जाना तय हो तो ऐप "exitOk" भेजती है, तभी पेज पीछे जाता है। सिर्फ़ फ़ोन पर। */
+  (function () {
+    if (!isPhone) return;
+    var exiting = false;
+    try { history.pushState({ pcb: 1 }, ''); } catch (x) { return; }
+    window.addEventListener('popstate', function () {
+      if (exiting) return;
+      try { history.pushState({ pcb: 1 }, ''); } catch (x) {}
+      try { f.contentWindow.postMessage({ pc: 'back' }, '*'); } catch (x) {}
+    });
+    window.addEventListener('message', function (e) {
+      var o = String(e.origin || ''), m = e.data || {};
+      if (m.pc !== 'exitOk' || !(/\.googleusercontent\.com$/.test(o) || o === 'https://script.google.com')) return;
+      exiting = true; try { history.back(); } catch (x) {}
+    });
+  })();
 </script>
 </body>
 </html>
