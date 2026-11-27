@@ -13302,30 +13302,56 @@ boot();
   if (!window.pcDesk || !window.pcDesk.clipFiles) return;
   function atDemo() { return String(zdRel('')).replace(/\\/g, '/').toLowerCase() === 'all client/used/demo exp'; }
   var zdPasteOrig = zdPaste;
+  var dmPasting = false;
   zdPaste = async function (sub) {
     if (!atDemo() || (S.zdClip && S.zdClip.items && S.zdClip.items.length)) return zdPasteOrig(sub);
-    var files = await window.pcDesk.clipFiles().catch(function () { return []; });
-    if (!files || !files.length) return toast('पहले PC पर फ़ाइल Copy करो (Ctrl+C), फिर यहाँ Paste करो', true);
-    toast('⏳ फ़ाइल Drive पर जा रही है…');
+    if (dmPasting) return;   /* एक Paste पर दो बार नहीं (दो अपलोड = दो एक जैसी फ़ाइलें) */
+    dmPasting = true;
     try {
-      var r = await window.pcDesk.demoPasteFiles(files, zdRel(''));
-      toast((r.n ? '✅ ' + r.n + ' फ़ाइल Drive पर डाली' : 'कुछ नहीं हुआ') + (r.errs.length ? ' · ❌ ' + r.errs.join(' · ') : ''), !!r.errs.length);
-    } catch (er) { fail(er); }
-    S.zd.sig = ''; renderZd(true);
+      var files = await window.pcDesk.clipFiles().catch(function () { return []; });
+      if (!files || !files.length) return toast('पहले PC पर फ़ाइल Copy करो (Ctrl+C), फिर यहाँ Paste करो', true);
+      toast('⏳ फ़ाइल Drive पर जा रही है…');
+      try {
+        var r = await window.pcDesk.demoPasteFiles(files, zdRel(''));
+        toast((r.n ? '✅ ' + r.n + ' फ़ाइल Drive पर डाली' : 'कुछ नहीं हुआ') + (r.errs.length ? ' · ❌ ' + r.errs.join(' · ') : ''), !!r.errs.length);
+      } catch (er) { fail(er); }
+      S.zd.sig = ''; renderZd(true);
+    } finally { dmPasting = false; }
   };
   var zdCmOrig = zdCm;
   zdCm = function (ev, i) {
     zdCmOrig(ev, i);
-    var m = document.getElementById('zdCm'); if (!m || i >= 0 || !atDemo()) return;
+    var m = document.getElementById('zdCm'); if (!m) return;
+    if (i >= 0) {
+      var ce = (zdSt().cur || [])[i];
+      if (ce && !ce.d) m.insertAdjacentHTML('beforeend', '<div class="zd-ms"></div><button class="zd-mi" onclick="zdCmHide();zdOpenWith()"><span>🧭</span>इस प्रोग्राम से खोलो (Open with)</button>');
+      return;
+    }
+    if (!atDemo()) return;
     var btns = m.querySelectorAll('button.zd-mi');
     for (var k = 0; k < btns.length; k++) { if (/Paste/.test(btns[k].textContent)) { btns[k].disabled = false; btns[k].setAttribute('onclick', 'zdCmHide();zdPaste()'); } }
+    m.insertAdjacentHTML('beforeend', '<div class="zd-ms"></div><button class="zd-mi" onclick="zdCmHide();dmBin()"><span>♻</span>Drive Bin से रिस्टोर</button>');
   };
-  document.addEventListener('keydown', function (e) {
-    if (!(e.ctrlKey || e.metaKey) || String(e.key || '').toLowerCase() !== 'v') return;
-    if (S.view !== 'zdrive' || !atDemo()) return;
-    var t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
-    e.preventDefault(); zdPaste();
-  });
+  /* 🧭 इस प्रोग्राम से खोलो (Windows का Open with) */
+  window.zdOpenWith = async function () {
+    var e = zdSelEnts()[0]; if (!e || e.d) return;
+    try { await window.pcDesk.zbOpenWith(zdRel(e.n)); } catch (er) { fail(er); }
+  };
+  /* ♻ DEMO EXP की Drive Bin से रिस्टोर (30 दिन के अंदर) */
+  window.dmBin = async function () {
+    var list;
+    try { list = await window.pcDesk.demoTrashed(); } catch (er) { return fail(er); }
+    var rows = list.length ? list.map(function (f) {
+      return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eee"><span style="flex:1;word-break:break-all">' + esc(f.name) + ' <span class="muted small">· ' + zdFmt(f.size) + '</span></span><button class="btn sm primary" onclick="dmRestore(&#39;' + esc(f.id) + '&#39;)">♻ रिस्टोर</button></div>';
+    }).join('') : '<div class="empty">Drive के Bin में इस फ़ोल्डर की कोई फ़ाइल नहीं (30 दिन तक रहती है)</div>';
+    openModal('♻ Drive Bin से रिस्टोर', '<div style="max-height:60vh;overflow:auto">' + rows + '</div><div class="actions" style="margin-top:12px"><button class="btn" onclick="closeModal()">बंद करें</button></div>');
+  };
+  window.dmRestore = async function (id) {
+    try { var f = await window.pcDesk.demoRestore(id); toast('✅ वापस आ गई: ' + f.name); } catch (er) { fail(er); }
+    S.zd.sig = ''; renderZd(true);
+    window.dmBin();
+  };
+  /* Ctrl+V की अलग listener नहीं: App.html की अपनी Ctrl+V ही zdPaste() चलाती है (पहले दो listener थीं = दो अपलोड) */
 })();
 </script>
 </body>
