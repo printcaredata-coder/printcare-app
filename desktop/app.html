@@ -2579,7 +2579,7 @@ function onBack() {
 /** ⌫ पेज के अंदर एक कदम ऊपर: 📁 आइटम → क्लाइंट → सारे क्लाइंट · खुला आइटम → सूची */
 function stepUp() {
   if (S.view === 'zdrive') { const Z = zdSt(); if (Z.q) { Z.q = ''; zdDraw(); return true; } if (zdUp()) return true; }
-  if (S.view === 'files' && zfsOn()) { const Z = zfsSt(); if (Z.q) { Z.q = ''; zfsDraw(); return true; } if (Z.by === 'item') { if ((Z.ip || []).length) { Z.ip.pop(); zfsDraw(); return true; } } else if ((Z.path || []).length) { Z.path.pop(); Z.sel = -1; zfsDraw(); return true; } }
+  if (S.view === 'files' && zfsOn()) { const Z = zfsSt(); if (Z.q) { Z.q = ''; zfsDraw(); return true; } if ((Z.path || []).length) { Z.path.pop(); Z.sel = -1; zfsDraw(); return true; } }
   if (S.view === 'files' && S.fs) { const F = S.fs; if (F.code) { fsGo(F.party); return true; } if (F.party) { fsGo(); return true; } }
   if (S.bk && S.bk.code && !S.bk.modal && $('bkBody') && $('bkBody').innerHTML.trim()) { iwBack(); return true; }
   return false;
@@ -6193,7 +6193,7 @@ function iwAskFile(oldName) {
   return new Promise(res => {
     const el = document.createElement('div'); el.className = 'effdlg';
     el.innerHTML = `<div class="effbox sc-box"><h3>🔄 फाइल बदल रहे हैं — पुरानी का क्या करें?</h3><div class="small">अभी लगी: <b>${esc(oldName || '')}</b></div>
-      <div class="sc-opts"><label class="sc-o"><input type="radio" name="iwK" value="keep" checked><span><b>📁 पुरानी फाइल रखो</b><small>पुरानी "Old File" फ़ोल्डर में (नाम में आज की तारीख / आखिरी JOB तक), पुराने ऑर्डर उसी के — आगे के ऑर्डर नई फाइल से</small></span></label>
+      <div class="sc-opts"><label class="sc-o"><input type="radio" name="iwK" value="keep" checked><span><b>📁 पुरानी फाइल रखो</b><small>UNUSED (पुरानी) फ़ोल्डर में (नाम में आज की तारीख / आखिरी JOB तक), पुराने ऑर्डर उसी के — आगे के ऑर्डर नई फाइल से</small></span></label>
       <label class="sc-o"><input type="radio" name="iwK" value="replace"><span><b>♻ रिप्लेस करो</b><small>पुरानी की जगह नई (Drive लिंक वही) — पुरानी नहीं बचेगी (गलती हो तो Drive की Version history से 30 दिन)</small></span></label></div>
       <div class="actions"><button class="btn" data-a="cancel">रद्द</button><button class="btn primary" data-a="ok">✔ ठीक है</button></div></div>`;
     document.body.appendChild(el);
@@ -6222,7 +6222,7 @@ async function iwFileUp(slot, file, mode, oldId) {
   if (old && old.id && old.id !== id) { c.fileHist = c.fileHist || {}; (c.fileHist[slot] = c.fileHist[slot] || []).unshift(Object.assign({}, old, { until: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) })); }
   c.files[slot] = info;
   if (bar) bar.textContent = '';
-  toast('📎 ' + label + ' — Drive पर ✓' + (mode === 'replace' ? ' (♻ रिप्लेस)' : old ? ' (📁 पुरानी Old File में)' : ''));
+  toast('📎 ' + label + ' — Drive पर ✓' + (mode === 'replace' ? ' (♻ रिप्लेस)' : old ? ' (📁 UNUSED में)' : ''));
 }
 async function iwUp(slot, inp) {
   const file = inp.files && inp.files[0]; if (!file) return;
@@ -7358,27 +7358,6 @@ function offXFDraw() {
     '';
   offAllLoad();
 }
-/* 📎 आइटम के फ़ोल्डर की सारी फ़ाइलें (ClapJoy आदि, मालिक 19-Nov): सर्वर से सूची, हर फ़ाइल Drive में खुले */
-/* 📎 ClapJoy: ALL CLIENT / CLAPJOY … / 'नंबर.नाम' फ़ोल्डर → आइटम '<पार्टी> - नंबर' (OLD फ़ोल्डर छोड़कर सारी फ़ाइलें, ZIP भी) — मालिक 20-Nov */
-async function cjFilesGo() {
-  openModal('📎 ClapJoy फ़ाइलें आइटम में', '<div id="cjfL" class="small">⏳ पहले जाँच — किस आइटम में कितनी फ़ाइलें लगेंगी…</div>');
-  const L = m => { const el = $('cjfL'); if (el) el.innerHTML += '<div>' + m + '</div>'; };
-  let r; try { r = await api('apiCjFilesRun', S.token, true); } catch (e) { L('⚠ ' + esc(e.message)); return; }
-  const c = r.cnt || {};
-  L('🔎 जाँच: <b>' + (c.items || 0) + '</b> आइटम में <b>' + (c.copied || 0) + '</b> नई फ़ाइलें लगेंगी · पहले से लगी ' + (c.skip || 0) + ' · ऐप में आइटम नहीं मिला ' + (c.noJr || 0) + (r.left ? ' · (और आइटम बाकी — असली काम में पूरे होंगे)' : ''));
-  if (!(await askYes('📎 ClapJoy के ' + (c.items || 0) + '+ आइटम में ' + (c.copied || 0) + '+ फ़ाइलें लगाऊँ?\nOLD फ़ोल्डर छोड़ा, ZIP / CDR समेत सब। पहले से लगी फ़ाइल दोबारा नहीं।', '📎 हाँ, लगाओ'))) { L('रद्द किया'); return; }
-  openModal('📎 ClapJoy फ़ाइलें आइटम में', '<div id="cjfL" class="small">⏳ फ़ाइलें लग रही हैं — हर बार ~4 मिनट, खिड़की खुली रखें…</div>');
-  let tot = 0, items = 0;
-  for (let k = 0; k < 40; k++) {
-    try { r = await api('apiCjFilesRun', S.token, false); } catch (e) { L('⚠ ' + esc(e.message) + ' — 30 सेकंड बाद फिर'); await new Promise(z => setTimeout(z, 30000)); continue; }
-    tot += (r.cnt || {}).copied || 0; items += (r.cnt || {}).items || 0;
-    L('✅ दौर ' + (k + 1) + ': ' + ((r.cnt || {}).copied || 0) + ' फ़ाइलें · ' + ((r.cnt || {}).items || 0) + ' आइटम' + (r.left ? ' · बाकी आइटम ' + r.left : ''));
-    if (!r.left) break;
-  }
-  S.offAllC = null;
-  L('<b>🎉 पूरा: ' + items + ' आइटम में ' + tot + ' फ़ाइलें लगीं।</b> हर आइटम में नीचे 📎 आइटम के फ़ोल्डर की सारी फ़ाइलें में दिखेंगी।');
-  savedNote('📎 ClapJoy: ' + items + ' आइटम में ' + tot + ' फ़ाइलें लगीं');
-}
 /* 📁 सारे क्लाइंट (मालिक 20-Nov): कंप्यूटर के ALL CLIENT जैसा — क्लाइंट → आइटम → फ़ाइलें। हमेशा ✅ Used (ताज़ा) पहले; 🗃 Unused अलग।
  * कोई फ़ाइल मिटती नहीं: Delete = Unused में। ✅ = किसी खाने में लगी है (ऊपर रखो तो कहाँ)। Ctrl+V / खींचकर डालो = अपलोड।
  * फ़ाइल के हिसाब से आइकॉन (PDF / CDR / ZIP / फोटो)। डेस्कटॉप सॉफ़्टवेयर: ⬇ कंप्यूटर में (Print Care Data / फ़ाइलें / क्लाइंट / आइटम) → कंप्यूटर के प्रोग्राम में खुले, Save करो तो Drive पर अपने-आप। */
@@ -7419,44 +7398,17 @@ async function renderZfs() {
     const info = await window.pcDesk.zInfo();
     if (!info.ok) { m.innerHTML = '<div class="empty">⚠ Z: नहीं मिली — ' + esc(info.root) + '<br>मालिक का कंप्यूटर चालू है और Z: जुड़ी है? <button class="btn sm" onclick="S.zIdx=null;renderZfs()">🔄 फिर देखो</button></div>'; return; }
     if (!S.zIdx) S.zIdx = await window.pcDesk.zScan(false);
-    await zfsLoadMap(false);
   } catch (e) { m.innerHTML = '<div class="empty">' + esc(e.message || e) + '</div>'; return; }
   zfsDraw();
 }
-async function zfsLoadMap(force) {
-  if (S.zMap && !force) { if (!S.zItems) zfsBuild(); return; }
-  let M = force ? null : await IDB.get('zmap');
-  if (!M || !M.r || Date.now() - (M.at || 0) > 86400000) { try { M = await api('apiZMap', S.token); IDB.put('zmap', M); } catch (e) { if (!M) { S.zMapErr = e.message || String(e); return; } } }
-  S.zMap = M; S.zMapErr = ''; zfsBuild();
-}
-/* Z: की हर फ़ाइल → आइटम: नाम + साइज़ से (पुरानी Book on Demand सूची), एक से ज़्यादा मिलें तो रास्ते से */
-const ZF_NOITEM = '📂 बिना आइटम';
-function zfsBuild() {
-  const I = S.zIdx, M = S.zMap; if (!I || !M) return; const ix = {};
-  M.r.forEach(r => { const k = String(r[0]).toLowerCase() + '|' + r[1]; (ix[k] = ix[k] || []).push(r); });
-  const items = {}; let hit = 0, tot = 0;
-  [['used', 'USED/'], ['unused', 'UNUSED/']].forEach(([mode, pre]) => (I[mode] || []).forEach(e => {
-    tot++; const rel = e[0], nm = rel.slice(rel.lastIndexOf('/') + 1), c = ix[nm.toLowerCase() + '|' + e[1]], rec = [rel, e[1], e[2], pre];
-    const none = () => { const cl = rel.indexOf('/') > 0 ? rel.slice(0, rel.indexOf('/')) : '(सीधे ALL CLIENT में)'; ((items[ZF_NOITEM] = items[ZF_NOITEM] || {})[cl] = items[ZF_NOITEM][cl] || []).push(rec); };
-    if (!c) return none();
-    let pick = c[0];
-    if (c.length > 1) { const low = rel.toLowerCase(), b = c.filter(x => !x[4] || low.indexOf(String(x[4]).toLowerCase()) >= 0), L = b.length ? b : c; if (new Set(L.map(x => x[2])).size !== 1) return none(); pick = L[0]; }
-    const party = M.p[pick[3]], code = pick[2]; ((items[party] = items[party] || {})[code] = items[party][code] || []).push(rec); hit++;
-  }));
-  S.zItems = items; S.zHit = hit; S.zTot = tot;
-}
-async function zfsRescan() { const m = $('main'); S.zIdx = null; S.zItems = null; zfsSt().sel = -1; if (m) m.innerHTML = '<div class="loading">Z: दोबारा पढ़ रहे हैं…</div>'; try { S.zIdx = await window.pcDesk.zScan(true); } catch (e) { fail(e); } zfsDraw(); }
+async function zfsRescan() { const m = $('main'); S.zIdx = null; zfsSt().sel = -1; if (m) m.innerHTML = '<div class="loading">Z: दोबारा पढ़ रहे हैं…</div>'; try { S.zIdx = await window.pcDesk.zScan(true); } catch (e) { fail(e); } zfsDraw(); }
 function zfsFmt(n) { return n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : (n / 1048576).toFixed(1) + ' MB'; }
 function zfsGo(i) { const Z = zfsSt(); Z.path = i < 0 ? [] : Z.path.slice(0, i + 1); Z.sel = -1; Z.q = ''; zfsDraw(); }
 function zfsIn(name) { const Z = zfsSt(); Z.path.push(name); Z.sel = -1; Z.q = ''; zfsDraw(); }
 function zfsMode(k) { const Z = zfsSt(); Z.mode = k; Z.path = []; Z.sel = -1; zfsDraw(); }
 function zfsRel(r, pre) { const Z = zfsSt(); return (pre || (Z.mode === 'unused' ? 'UNUSED/' : 'USED/')) + r; }
-function zfsBy(k) { const Z = zfsSt(); Z.by = k; Z.sel = -1; Z.q = ''; zfsDraw(); }
-function zfsIp(i) { const Z = zfsSt(); Z.ip = i < 0 ? [] : Z.ip.slice(0, i + 1); Z.q = ''; zfsDraw(); }
-function zfsIpIn(el) { const Z = zfsSt(); Z.ip.push(el.dataset.n); Z.q = ''; zfsDraw(); }
 function zfsDraw() {
   const m = $('main'), I = S.zIdx, Z = zfsSt(); if (!m || !I) return;
-  if (Z.by === 'item' && S.zItems) return zfsDrawItems();
   const all = Z.mode === 'unused' ? I.unused : I.used, pre = Z.path.length ? Z.path.join('/') + '/' : '', q = String(Z.q || '').trim().toLowerCase();
   const dirs = {}, files = [];
   if (q) { all.forEach(e => { if (files.length < 400 && e[0].toLowerCase().indexOf(q) >= 0) files.push(e); }); }
@@ -7465,8 +7417,7 @@ function zfsDraw() {
   files.sort((a, b) => b[2] - a[2]);
   Z.cur = files;
   const cr = ['<button class="link" onclick="zfsGo(-1)">📁 सारे क्लाइंट</button>'].concat(Z.path.map((p, i) => i === Z.path.length - 1 ? '<b>' + esc(p) + '</b>' : '<button class="link" onclick="zfsGo(' + i + ')">' + esc(p) + '</button>'));
-  const by = '<span class="fs-tg"><button class="on">📁 फ़ोल्डर</button><button onclick="zfsBy(\'item\')" title="पार्टी → आइटम (ITAM CODE) → फ़ाइलें">🧩 आइटम से' + (S.zHit ? ' (' + fmtNum(S.zHit) + ')' : '') + '</button></span> ';
-  const tg = by + '<span class="fs-tg"><button class="' + (Z.mode === 'used' ? 'on' : '') + '" onclick="zfsMode(\'used\')">✅ Used (' + fmtNum(I.used.length) + ')</button><button class="' + (Z.mode === 'unused' ? 'on' : '') + '" onclick="zfsMode(\'unused\')">🗃 Unused (' + fmtNum(I.unused.length) + ')</button></span>';
+  const tg = '<span class="fs-tg"><button class="' + (Z.mode === 'used' ? 'on' : '') + '" onclick="zfsMode(\'used\')">✅ Used (' + fmtNum(I.used.length) + ')</button><button class="' + (Z.mode === 'unused' ? 'on' : '') + '" onclick="zfsMode(\'unused\')">🗃 Unused (' + fmtNum(I.unused.length) + ')</button></span>';
   const ico = n => '<span class="zf-i">' + (/\.pdf$/i.test(n) ? '📕' : /\.(cdr|ai|psd|eps)$/i.test(n) ? '🎨' : /\.(jpe?g|png|gif|tif+|bmp|webp)$/i.test(n) ? '🖼' : /\.(xlsx?|csv)$/i.test(n) ? '📊' : /\.(docx?)$/i.test(n) ? '📝' : /\.(zip|rar|7z)$/i.test(n) ? '🗜' : '📄') + '</span>';
   m.innerHTML = '<div class="fs-page" id="zfsPage"><div class="fs-bar"><span class="fs-cr">' + cr.join(' <span class="muted">›</span> ') + '</span>' + tg + '<span class="iw2-sp"></span>'
     + '<input id="zfsQ" class="fs-q" placeholder="🔍 नाम / क्लाइंट / आइटम नंबर से खोजें" value="' + esc(Z.q || '') + '" oninput="zfsSt().q=this.value;clearTimeout(S.zfT);S.zfT=setTimeout(zfsDraw,250)">'
@@ -7478,30 +7429,6 @@ function zfsDraw() {
         + '<button class="btn sm primary" onclick="zfsView(' + i + ')">👁</button><button class="btn sm" onclick="zfsOpen(' + i + ')" title="कंप्यूटर के प्रोग्राम में खोलो">📂 खोलो</button><button class="btn sm" onclick="zfsShow(' + i + ')" title="फ़ोल्डर में दिखाओ">📍</button></div>'; }).join('') + '</div>' : (!dn.length || q ? emptyArt('empty-files', q ? 'कुछ नहीं मिला' : 'इस फ़ोल्डर में कुछ नहीं') : ''))
     + '</div>';
   const qi = $('zfsQ'); if (qi && S.zfFocus) { qi.focus(); try { qi.setSelectionRange(qi.value.length, qi.value.length); } catch (e) {} }
-}
-/* 🧩 आइटम से: पार्टी → आइटम → उस आइटम की फ़ाइलें (Used + Unused दोनों, निशान के साथ) */
-function zfsDrawItems() {
-  const m = $('main'), Z = zfsSt(), T = S.zItems, ip = Z.ip || [], q = String(Z.q || '').trim().toLowerCase(), I = S.zIdx;
-  const num = s => { const x = String(s).match(/-\s*(\d+)\s*$/); return x ? +x[1] : 1e9; };
-  const cr = ['<button class="link" onclick="zfsIp(-1)">🧩 सारे क्लाइंट</button>'].concat(ip.map((p, i) => i === ip.length - 1 ? '<b>' + esc(p) + '</b>' : '<button class="link" onclick="zfsIp(' + i + ')">' + esc(p) + '</button>'));
-  const by = '<span class="fs-tg"><button onclick="zfsBy(\'fold\')">📁 फ़ोल्डर</button><button class="on">🧩 आइटम से (' + fmtNum(S.zHit || 0) + ' / ' + fmtNum(S.zTot || 0) + ')</button></span>';
-  let body = ''; Z.cur = [];
-  if (ip.length === 0) {
-    const ps = Object.keys(T).filter(p => !q || p.toLowerCase().indexOf(q) >= 0).sort((a, b) => a === ZF_NOITEM ? 1 : b === ZF_NOITEM ? -1 : a.toLowerCase() < b.toLowerCase() ? -1 : 1);
-    body = ps.length ? '<div class="fs-grid">' + ps.map(p => '<button class="fs-fold" onclick="zfsIpIn(this)" data-n="' + esc(p) + '"><span>📁</span><b>' + esc(p) + '</b><small class="muted">' + fmtNum(Object.keys(T[p]).length) + (p === ZF_NOITEM ? ' क्लाइंट · ' + fmtNum(Object.keys(T[p]).reduce((s, k) => s + T[p][k].length, 0)) + ' फ़ाइल' : ' आइटम') + '</small></button>').join('') + '</div>' : emptyArt('empty-files', 'कुछ नहीं मिला');
-  } else if (ip.length === 1) {
-    const its = T[ip[0]] || {}, cs = Object.keys(its).filter(k => !q || k.toLowerCase().indexOf(q) >= 0).sort((a, b) => num(a) - num(b) || (a < b ? -1 : 1));
-    body = cs.length ? '<div class="fs-grid">' + cs.map(k => '<button class="fs-fold" onclick="zfsIpIn(this)" data-n="' + esc(k) + '" title="' + esc(k) + '"><span>🧩</span><b>' + esc(k) + '</b><small class="muted">' + fmtNum(its[k].length) + ' फ़ाइल</small></button>').join('') + '</div>' : emptyArt('empty-files', 'कुछ नहीं मिला');
-  } else {
-    const fl = ((T[ip[0]] || {})[ip[1]] || []).filter(e => !q || e[0].toLowerCase().indexOf(q) >= 0).sort((a, b) => b[2] - a[2]); Z.cur = fl;
-    const ico = n => '<span class="zf-i">' + (/\.pdf$/i.test(n) ? '📕' : /\.(cdr|ai|psd|eps)$/i.test(n) ? '🎨' : /\.(jpe?g|png|gif|tif+|bmp|webp)$/i.test(n) ? '🖼' : /\.(xlsx?|csv)$/i.test(n) ? '📊' : '📄') + '</span>';
-    body = fl.length ? '<div class="fs-rows">' + fl.map((e, i) => { const nm = e[0].slice(e[0].lastIndexOf('/') + 1), used = e[3] === 'USED/';
-      return '<div class="fs-row zf-row" ondblclick="zfsOpen(' + i + ')">' + ico(nm) + '<span class="fs-nm" title="' + esc(e[0]) + '">' + esc(nm) + '<small class="muted"> — ' + esc(e[0].slice(0, Math.max(0, e[0].length - nm.length - 1))) + '</small></span><span class="pst ' + (used ? 'done' : '') + '">' + (used ? '✅ Used' : '🗃 Unused') + '</span><span class="muted small">' + zfsFmt(e[1]) + ' · ' + esc(new Date(e[2] * 1000).toISOString().slice(0, 10)) + '</span>'
-        + '<button class="btn sm primary" onclick="zfsView(' + i + ')">👁</button><button class="btn sm" onclick="zfsOpen(' + i + ')">📂 खोलो</button><button class="btn sm" onclick="zfsShow(' + i + ')">📍</button></div>'; }).join('') + '</div>' : emptyArt('empty-files', 'कुछ नहीं मिला');
-  }
-  m.innerHTML = '<div class="fs-page" id="zfsPage"><div class="fs-bar"><span class="fs-cr">' + cr.join(' <span class="muted">›</span> ') + '</span>' + by + '<span class="iw2-sp"></span>'
-    + '<input id="zfsQ" class="fs-q" placeholder="🔍 खोजें" value="' + esc(Z.q || '') + '" oninput="zfsSt().q=this.value;clearTimeout(S.zfT);S.zfT=setTimeout(zfsDraw,250)"><button class="btn sm" onclick="zfsRescan()" title="Z: दोबारा पढ़ो">🔄</button></div>'
-    + '<div class="muted small" style="margin:2px 0 8px">Z: से सीधे · आइटम से जुड़ी ' + fmtNum(S.zHit || 0) + ' फ़ाइलें (कुल ' + fmtNum(S.zTot || 0) + ') · बिना आइटम ' + fmtNum((S.zTot || 0) - (S.zHit || 0)) + ' · कुल ' + fmtNum(S.zTot || 0) + ' (सब यहाँ दिखती हैं)</div>' + body + '</div>';
 }
 async function zfsOpen(i) { const e = (zfsSt().cur || [])[i]; if (!e) return; try { await window.pcDesk.zOpen(zfsRel(e[0], e[3])); } catch (er) { fail(er); } }
 async function zfsShow(i) { const e = (zfsSt().cur || [])[i]; if (!e) return; try { await window.pcDesk.zShow(zfsRel(e[0], e[3])); } catch (er) { fail(er); } }
@@ -8172,7 +8099,7 @@ async function offUpS(slot, label, inp) {
     await api('apiWfFileSet', S.token, code, 'OFFSET', slot, info, fMode);
     const c = S.wfDet.OFFSET = S.wfDet.OFFSET || { calc: {} }; c.calc = c.calc || {}; c.calc.files = c.calc.files || {}; c.calc.files[slot] = info;
     S.iwLocal = S.iwLocal || {}; S.iwLocal[code + '|' + slot] = file;
-    delete S.bkCache[code]; bar(''); toast('📎 ' + label + ' — Drive पर ✓' + (cur ? (fMode === 'replace' ? ' (♻ रिप्लेस)' : ' (📁 पुरानी Old File में, तारीख के साथ)') : ''));
+    delete S.bkCache[code]; bar(''); toast('📎 ' + label + ' — Drive पर ✓' + (cur ? (fMode === 'replace' ? ' (♻ रिप्लेस)' : ' (📁 UNUSED में, तारीख के साथ)') : ''));
     offDrawParts(); offXFDraw(); offShow(slot);
     if (slot === 'prn' && /\.pdf$/i.test(file.name || '')) offSplitGo('file', null, file);
   } catch (e) { bar('⚠'); fail(e); }
@@ -9093,7 +9020,7 @@ function bkpUpSet(code, p) {
 }
 async function bkpDetach(code, slot) {
   const r = (S.bkpD.rows || []).find(x => x.code === code); const nm = r && r.bw ? r.bw.name : '';
-  if (!(await askYes('🗑 ' + (nm ? '“' + nm + '” ' : '') + 'यह फ़ाइल इस आइटम से हटानी है?\nतारा को भी नहीं दिखेगी. पुरानी फ़ाइल Drive की Old File में रहेगी, चाहें तो वापस ला सकते हैं।', 'हाँ, हटाओ'))) return;
+  if (!(await askYes('🗑 ' + (nm ? '“' + nm + '” ' : '') + 'यह फ़ाइल इस आइटम से हटानी है?\nतारा को भी नहीं दिखेगी. पुरानी फ़ाइल Drive में UNUSED (पुरानी) फ़ोल्डर में रहेगी, चाहें तो वापस ला सकते हैं।', 'हाँ, हटाओ'))) return;
   try { await api('apiWfFileSet', S.token, code, 'TARA', slot, null, 'keep'); S.bkpD = await api('apiBkpData', S.token); bkpCacheSave(); drawBkp(); toast('🗑 फ़ाइल हट गई'); } catch (e) { fail(e); }
 }
 function bkpAttach(code, slot) {
